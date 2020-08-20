@@ -1,0 +1,26 @@
+{
+  "name": "json-scriptify",
+  "version": "0.1.0",
+  "description": "Convert a javascript object to a script",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mr-shabani/json-scriptify.git"
+  },
+  "keywords": [
+    "json",
+    "scriptify"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mr-shabani/json-scriptify/issues"
+  },
+  "homepage": "https://github.com/mr-shabani/json-scriptify#readme",
+  "devDependencies": {
+    "jest": "^26.4.1"
+  }
+}
