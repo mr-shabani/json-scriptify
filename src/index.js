@@ -12,7 +12,9 @@ var replacer = function(key, value) {
 };
 
 var scriptify = function(obj, options) {
-    options = options || {};
+	options = options || {};
+	
+	objectSet.clear();
 
     traverse(obj, "obj");
 
