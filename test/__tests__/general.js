@@ -41,7 +41,19 @@ test("simple plain JSON object with special character in keys", function() {
 	expect(checkFor({ "#": 1 })).toEqual(true);
 	expect(checkFor({ "\n": 1 })).toEqual(true);
 	expect(checkFor({ '"': 1 })).toEqual(true);
-	expect(checkFor({ '"': 1 })).toEqual(true);
+	expect(checkFor({ "'": 1 })).toEqual(true);
+	expect(checkFor({ '1': 1 })).toEqual(true);
+	let obj = {};
+	obj["#"] = obj;
+	expect(checkFor(obj)).toEqual(true);
+	obj["\n"] = obj;
+	expect(checkFor(obj)).toEqual(true);
+	obj["'"] = obj;
+	expect(checkFor(obj)).toEqual(true);
+	obj["1"] = obj;
+	expect(checkFor(obj)).toEqual(true);
+	obj['"'] = obj;
+	expect(checkFor(obj)).toEqual(true);
 });
 
 test("JSON object with circular references", function() {

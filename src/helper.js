@@ -41,7 +41,7 @@ var traverse = function(obj, path) {
 	}
 	mark.set(obj, path);
 	Object.entries(obj).forEach(([key, value]) => {
-		traverse(value, path + "." + key, mark);
+		traverse(value, path + '[' + JSON.stringify(key)+']', mark);
 	});
 };
 
