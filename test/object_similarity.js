@@ -1,28 +1,34 @@
 var checkSimilarity = function(obj1, obj2, ignoreFunctions) {
 	var mark = arguments[3] || new Map();
 
-	if(obj1 instanceof RegExp)
-		obj1 = obj1.toString();
-	if(obj2 instanceof RegExp)
-		obj2 = obj2.toString();
-	if(obj2 instanceof Map)
-		obj2 = Array.from(obj2);
-	if(obj1 instanceof Map)
-		obj1 = Array.from(obj1);
+	if (obj1 instanceof RegExp) obj1 = obj1.toString();
+	if (obj2 instanceof RegExp) obj2 = obj2.toString();
 
 	if (typeof obj1 != "object" || typeof obj2 != "object") {
 		if (typeof obj1 == "function" && typeof obj2 == "function") {
-            if (ignoreFunctions) return true;
+			if (ignoreFunctions) return true;
 			return obj1.toString() == obj2.toString();
 		}
-		if(obj1!=obj2)
-			console.log("diff : ",obj1," != ",obj2);
+		// if (obj1 != obj2) console.log("diff : ", obj1, " != ", obj2);
 		return obj1 == obj2;
 	}
 
 	if (mark.has(obj1)) return mark.get(obj1) == obj2;
 
 	mark.set(obj1, obj2);
+
+	if (obj1 instanceof Map || obj2 instanceof Map) {
+		if (!(obj2 instanceof Map)) {
+			// console.log("diff : ",obj1,"\n is Map but ",obj2,"\n is not.");
+			return false;
+		}
+		return checkSimilarity(
+			Array.from(obj1),
+			Array.from(obj2),
+			ignoreFunctions,
+			mark
+		);
+	}
 
 	var returnValue = true;
 	Object.entries(obj1).forEach(([key, value]) => {
