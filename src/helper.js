@@ -1,6 +1,7 @@
 var definitionList = {
 	circularReferences: [],
-	functionList: []
+	functionsList: [],
+	objectConstructors: []
 };
 
 var traverse = function(obj, path) {
@@ -8,12 +9,28 @@ var traverse = function(obj, path) {
 	if (!mark) {
 		var mark = new Map();
 		definitionList.circularReferences = [];
-		definitionList.functionList = [];
+		definitionList.functionsList = [];
 	}
 
-	if (obj.to_JSON) obj = obj.to_JSON();
+	if (obj instanceof Date) {
+		definitionList.objectConstructors.push([
+			path,
+			`new Date(${obj.getTime()})`
+		]);
+		return;
+	}
+	if (obj instanceof RegExp) {
+		definitionList.objectConstructors.push([path, obj.toString()]);
+		return;
+	}
+	if (typeof obj == "bigint") {
+		definitionList.objectConstructors.push([path, `BigInt(${obj.toString()})`]);
+		return;
+	}
+
+	// if (obj.toJSON) obj = obj.toJSON();
 	if (typeof obj == "function") {
-		definitionList.functionList.push([path, obj.toString()]);
+		definitionList.functionsList.push([path, obj.toString()]);
 		return;
 	}
 	if (typeof obj != "object") return;

@@ -1,6 +1,15 @@
 var checkSimilarity = function(obj1, obj2, ignoreFunctions) {
 	var mark = arguments[3] || new Map();
 
+	if(obj1 instanceof RegExp)
+		obj1 = obj1.toString();
+	if(obj2 instanceof RegExp)
+		obj2 = obj2.toString();
+	if(obj2 instanceof Map)
+		obj2 = Array.from(obj2);
+	if(obj1 instanceof Map)
+		obj1 = Array.from(obj1);
+
 	if (typeof obj1 != "object" || typeof obj2 != "object") {
 		if (typeof obj1 == "function" && typeof obj2 == "function") {
             if (ignoreFunctions) return true;
