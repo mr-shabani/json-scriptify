@@ -1,5 +1,6 @@
 var objectSet = new Set();
-var { traverse, definitionList } = require("./helper");
+var { traverse } = require("./helper");
+var classesToScript = require("./toScript")
 
 var replacer = function(key, value) {
 	if (typeof value == "object") {
@@ -8,8 +9,10 @@ var replacer = function(key, value) {
 		}
 		objectSet.add(value);
 	}
-	if(typeof value == "bigint")
-		return;
+	if (typeof value == "bigint") return;
+	for (let cls of classesToScript) {
+		if (value instanceof cls.type) return;
+	}
 	return value;
 };
 
@@ -18,24 +21,25 @@ var scriptify = function(obj, options) {
 
 	objectSet.clear();
 
-	traverse(obj, "obj");
+	expressionList = traverse(obj, "obj");
 
 	var str = "(function(){\n//version 1\n";
 	str += "  var obj = " + JSON.stringify(obj, replacer) + ";";
 
 	str += "\n//Circular references";
-	definitionList.circularReferences.forEach(([path, reference]) => {
+	expressionList.circularReferences.forEach(([path, reference]) => {
 		str += "\n" + "  " + path + " = " + reference + ";";
 	});
 
 	str += "\n//Object constructors";
-	definitionList.objectConstructors.forEach(([path, code]) => {
-		str += "\n" + "  " + path + " = " + code + ";";
+	expressionList.objectConstructors.forEach(([path, code, addExpression]) => {
+		if (addExpression) str += `\n ${path} = ${code}; ${path}${addExpression}`;
+		else str += `\n ${path} = ${code};`;
 	});
 
 	if (options.withAllFunctions) {
 		str += "\n//Functions";
-		definitionList.functionsList.forEach(([path, code]) => {
+		expressionList.functionsList.forEach(([path, code]) => {
 			str += "\n" + "  " + path + " = " + code + ";";
 		});
 	}
