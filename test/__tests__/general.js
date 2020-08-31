@@ -30,7 +30,7 @@ test("simple plain JSON object", function() {
 	expect(checkFor({ x: 1, obj: { y: 2 } })).toEqual(true);
 });
 
-test("pain JSON object with functions", function() {
+test("plain JSON object with functions", function() {
 	expect(checkFor(function() {}, true)).toEqual(true);
 	expect(checkFor(() => 1, true)).toEqual(true);
 	expect(checkFor({ f: function() {} }, true)).toEqual(true);
@@ -54,15 +54,4 @@ test("simple plain JSON object with special character in keys", function() {
 	expect(checkFor(obj)).toEqual(true);
 	obj['"'] = obj;
 	expect(checkFor(obj)).toEqual(true);
-});
-
-test("JSON object with circular references", function() {
-	var obj = {};
-	obj.c = obj;
-	expect(checkFor(obj)).toEqual(true);
-	obj.o = { x: 1, f: () => 1, obj: obj };
-	expect(checkFor(obj,true)).toEqual(true);
-	obj.oo = { y: 2, c: obj.o };
-	obj.o.c = obj.oo;
-	expect(checkFor(obj,true)).toEqual(true);
 });
