@@ -77,3 +77,26 @@ test("object with circular map", function() {
     obj2.m.set(obj2.m,obj2.m);
 	expect(checkSimilarity(obj1, obj2)).toEqual(true);
 });
+
+test("object with set", function() {
+	let obj1 = {s:new Set([1,2,"t"])};
+	obj1.c = obj1;
+	let obj2 = {s:new Set([1,2])};
+	obj2.s.add("t");
+	obj2.c = obj2;
+	expect(checkSimilarity(obj1, obj2)).toEqual(true);
+});
+
+test("object with circular set", function() {
+	let obj1 = {s:new Set([1,2,"t"])};
+    obj1.c = obj1;
+    obj1.s.add(obj1);
+    obj1.s.add(obj1.s);
+	let obj2 = {s:new Set([2,"t"])};
+	obj2.s.add(1);
+	obj2.c = obj2;
+    obj2.s.add(obj2);
+	expect(checkSimilarity(obj1, obj2)).toEqual(false);
+    obj2.s.add(obj2.s);
+	expect(checkSimilarity(obj1, obj2)).toEqual(true);
+});
