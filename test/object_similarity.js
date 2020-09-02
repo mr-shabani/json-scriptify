@@ -1,15 +1,13 @@
+var classToPlainObject = require("./classToPlainObject");
+
 var checkSimilarity = function(obj1, obj2, ignoreFunctions) {
 	var mark = arguments[3] || new Map();
-
-	if (obj1 instanceof RegExp) obj1 = obj1.toString();
-	if (obj2 instanceof RegExp) obj2 = obj2.toString();
 
 	if (typeof obj1 != "object" || typeof obj2 != "object") {
 		if (typeof obj1 == "function" && typeof obj2 == "function") {
 			if (ignoreFunctions) return true;
 			return obj1.toString() == obj2.toString();
 		}
-		// if (obj1 != obj2) console.log("diff : ", obj1, " != ", obj2);
 		return obj1 == obj2;
 	}
 
@@ -17,17 +15,18 @@ var checkSimilarity = function(obj1, obj2, ignoreFunctions) {
 
 	mark.set(obj1, obj2);
 
-	if (obj1 instanceof Map || obj2 instanceof Map) {
-		if (!(obj2 instanceof Map)) {
-			// console.log("diff : ",obj1,"\n is Map but ",obj2,"\n is not.");
-			return false;
+	for (let cls of classToPlainObject) {
+		if (obj1 instanceof cls.type || obj2 instanceof cls.type) {
+			if (!(obj1 instanceof cls.type && obj2 instanceof cls.type)) {
+				return false;
+			}
+			return checkSimilarity(
+				cls.toPlainObject(obj1),
+				cls.toPlainObject(obj2),
+				ignoreFunctions,
+				mark
+			);
 		}
-		return checkSimilarity(
-			Array.from(obj1),
-			Array.from(obj2),
-			ignoreFunctions,
-			mark
-		);
 	}
 
 	var returnValue = true;
