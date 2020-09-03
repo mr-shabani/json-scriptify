@@ -12,7 +12,7 @@ class ScriptFromObject {
 			this.tempIndex = parent.tempIndex;
 			this.tabSpace = parent.tabSpace + "\t";
 		} else {
-			this.mark = new Map();
+			this.mark = new WeakMap();
 			this.tempIndex = 0;
 		}
 		this.obj = obj;
@@ -91,7 +91,7 @@ class ScriptFromObject {
 	getRawScript(varName, options) {
 		options = options || {};
 
-		this.objectSet = new Set();
+		this.objectSet = new WeakSet();
 
 		this.traverse(this.obj, varName);
 
