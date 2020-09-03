@@ -1,7 +1,13 @@
 classes = [
 	{
+		type: Date,
+		toPlainObject: function(date) {
+			return date.getTime();
+		}
+	},
+	{
 		type: RegExp,
-		toPlainObject: function(regexp){
+		toPlainObject: function(regexp) {
 			return regexp.toString();
 		}
 	},
@@ -13,7 +19,7 @@ classes = [
 	},
 	{
 		type: Set,
-		toPlainObject: function(set){
+		toPlainObject: function(set) {
 			return Array.from(set).sort();
 		}
 	}
