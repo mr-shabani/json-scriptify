@@ -5,12 +5,10 @@ class ScriptFromObject {
 		this.circularExpressions = [];
 		this.objectConstructors = [];
 		this.functionsList = [];
-		this.tabSpace = " ";
 		this.parent = parent;
 		if (parent) {
 			this.mark = parent.mark;
 			this.tempIndex = parent.tempIndex;
-			this.tabSpace = parent.tabSpace + "\t";
 		} else {
 			this.mark = new WeakMap();
 			this.tempIndex = 0;
@@ -22,7 +20,7 @@ class ScriptFromObject {
 	getScript(obj) {
 		let tempVarName = `temp[${this.tempIndex++}]`;
 		let objScript = new ScriptFromObject(obj, tempVarName, this);
-		this.objectConstructors.push([objScript.exportAsFunctionCall() + ";"]);
+		this.objectConstructors.push([objScript.getRawScript(tempVarName)]);
 		return tempVarName;
 	}
 
@@ -60,9 +58,15 @@ class ScriptFromObject {
 			}
 		}
 
-		Object.entries(obj).forEach(([key, value]) => {
-			this.traverse(value, path + "[" + JSON.stringify(key) + "]");
-		});
+		if (obj instanceof Array) {
+			obj.forEach((value,index) => {
+				this.traverse(value, path + "[" + index + "]");
+			});
+		} else {
+			Object.entries(obj).forEach(([key, value]) => {
+				this.traverse(value, path + "[" + JSON.stringify(key) + "]");
+			});
+		}
 	}
 
 	JsonReplacer(key, value) {
@@ -82,9 +86,8 @@ class ScriptFromObject {
 	exportAsFunctionCall(options) {
 		var str = "(function(){//version 1\n";
 		str += this.getRawScript(this.objName, options);
-		let parentTabSpace = this.parent ? this.parent.tabSpace : " ";
-		if (this.parent) str += `\n${parentTabSpace}})()`;
-		else str += `\n${parentTabSpace}return ${this.objName};\n})()`;
+		if (this.parent) str += `\n })()`;
+		else str += `\n return ${this.objName};\n})()`;
 		return str;
 	}
 
@@ -102,27 +105,26 @@ class ScriptFromObject {
 		}
 
 		str +=
-			` ${this.tabSpace}${varName} = ` +
+			` ${varName} = ` +
 			JSON.stringify(this.obj, this.JsonReplacer.bind(this)) +
 			";";
 
 		// str += "\n//Circular references";
 		this.circularExpressions.forEach(([path, reference]) => {
-			str += `\n${this.tabSpace}${path} = ${reference};`;
+			str += `\n ${path} = ${reference};`;
 		});
 
 		// str += "\n//Object constructors";
 		this.objectConstructors.forEach(([path, code, addExpression]) => {
-			if (addExpression)
-				str += `\n${this.tabSpace}${path} = ${code}; ${addExpression}`;
-			else if (code) str += `\n${this.tabSpace}${path} = ${code};`;
-			else str += `\n${this.tabSpace}${path}`;
+			if (addExpression) str += `\n ${path} = ${code}; ${addExpression}`;
+			else if (code) str += `\n ${path} = ${code};`;
+			else str += `\n ${path}`;
 		});
 
 		if (options.withAllFunctions) {
 			// str += "\n//Functions";
 			this.functionsList.forEach(([path, code]) => {
-				str += `\n${this.tabSpace}${path} = ${code};`;
+				str += `\n ${path} = ${code};`;
 			});
 		}
 		return str;
