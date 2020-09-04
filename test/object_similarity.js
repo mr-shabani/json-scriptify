@@ -1,7 +1,15 @@
 var classToPlainObject = require("./classToPlainObject");
+var typesSimilarityCheck = require("./typesSimilarityCheck");
 
 var checkSimilarity = function(obj1, obj2, ignoreFunctions) {
 	var mark = arguments[3] || new Map();
+
+	for (let type of typesSimilarityCheck) {
+		if (type.mustCheck(obj1, obj2)) {
+			return type.isSimilar(obj1, obj2);
+		}
+	}
+
 
 	if (typeof obj1 != "object" || typeof obj2 != "object") {
 		if (typeof obj1 == "function" && typeof obj2 == "function") {

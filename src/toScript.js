@@ -34,15 +34,54 @@ var classes = [
 	{
 		type: WeakSet,
 		toScript: function(obj, getScript, varName) {
-			throw new TypeError("WeakSet cannot be scriptify!")
+			throw new TypeError("WeakSet cannot be scriptify!");
 		}
 	},
 	{
 		type: WeakMap,
 		toScript: function(obj, getScript, varName) {
-			throw new TypeError("WeakMap cannot be scriptify!")
+			throw new TypeError("WeakMap cannot be scriptify!");
 		}
 	}
 ];
 
-module.exports = classes;
+var types = [
+	{
+		is: obj => typeof obj == "bigint",
+		toScript: function(obj) {
+			return `BigInt(${obj.toString()})`;
+		}
+	},
+	{
+		is: obj => Object.is(obj, null),
+		toScript: function(obj) {
+			return "null";
+		}
+	},
+	{
+		is: obj => Object.is(obj, undefined),
+		toScript: function(obj) {
+			return "undefined";
+		}
+	},
+	{
+		is: obj => Object.is(obj, NaN),
+		toScript: function(obj) {
+			return "NaN";
+		}
+	},
+	{
+		is: obj => Object.is(obj, Infinity),
+		toScript: function(obj) {
+			return "Infinity";
+		}
+	},
+	{
+		is: obj => Object.is(obj, -Infinity),
+		toScript: function(obj) {
+			return "-Infinity";
+		}
+	}
+];
+
+module.exports = { classes, types };

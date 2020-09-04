@@ -1,4 +1,4 @@
-var classesToScript = require("./toScript");
+var { classes: classesToScript, types: typesToScript } = require("./toScript");
 
 class ScriptFromObject {
 	constructor(obj, objName, parent) {
@@ -21,20 +21,32 @@ class ScriptFromObject {
 		this.traverse(obj, this.objName);
 	}
 
-	getScript(obj) {
-		let tempVarName = `temp[${this.tempIndex++}]`;
-		let objScript = new ScriptFromObject(obj, tempVarName, this);
-		this.objectConstructors.push([objScript.getRawScript()]);
-		return tempVarName;
+	JsonReplacer(key, value) {
+		for (let type of typesToScript) {
+			if (type.is(value)) return;
+		}
+		if (typeof value == "object") {
+			if (this.objectSet.has(value)) {
+				return;
+			}
+			this.objectSet.add(value);
+		}
+		for (let cls of classesToScript) {
+			if (value instanceof cls.type) return;
+		}
+		return value;
 	}
 
 	traverse(obj, path) {
+		for (let type of typesToScript) {
+			if (type.is(obj)) {
+				const replacement = type.toScript(obj);
+				this.objectConstructors.push([path, replacement]);
+				return;
+			}
+		}
 		if (typeof obj == "function") {
 			this.functionsList.push([path, obj.toString()]);
-			return;
-		}
-		if (typeof obj == "bigint") {
-			this.objectConstructors.push([path, `BigInt(${obj.toString()})`]);
 			return;
 		}
 
@@ -73,18 +85,11 @@ class ScriptFromObject {
 		}
 	}
 
-	JsonReplacer(key, value) {
-		if (typeof value == "object") {
-			if (this.objectSet.has(value)) {
-				return;
-			}
-			this.objectSet.add(value);
-		}
-		if (typeof value == "bigint") return;
-		for (let cls of classesToScript) {
-			if (value instanceof cls.type) return;
-		}
-		return value;
+	getScript(obj) {
+		let tempVarName = `temp[${this.tempIndex++}]`;
+		let objScript = new ScriptFromObject(obj, tempVarName, this);
+		this.objectConstructors.push([objScript.getRawScript()]);
+		return tempVarName;
 	}
 
 	exportAsFunctionCall(options) {
