@@ -30,6 +30,18 @@ var classes = [
 				add: `${getScript(Array.from(obj))}.forEach((v)=>{${varName}.add(v);})`
 			};
 		}
+	},
+	{
+		type: WeakSet,
+		toScript: function(obj, getScript, varName) {
+			throw new TypeError("WeakSet cannot be scriptify!")
+		}
+	},
+	{
+		type: WeakMap,
+		toScript: function(obj, getScript, varName) {
+			throw new TypeError("WeakMap cannot be scriptify!")
+		}
 	}
 ];
 
