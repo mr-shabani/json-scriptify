@@ -13,14 +13,18 @@ class ScriptFromObject {
 			this.mark = new WeakMap();
 			this.tempIndex = 0;
 		}
-		this.obj = obj;
 		this.objName = objName || "obj";
+
+		this.objectSet = new WeakSet();
+		this.stringified = JSON.stringify(obj, this.JsonReplacer.bind(this));
+
+		this.traverse(obj, this.objName);
 	}
 
 	getScript(obj) {
 		let tempVarName = `temp[${this.tempIndex++}]`;
 		let objScript = new ScriptFromObject(obj, tempVarName, this);
-		this.objectConstructors.push([objScript.getRawScript(tempVarName)]);
+		this.objectConstructors.push([objScript.getRawScript()]);
 		return tempVarName;
 	}
 
@@ -59,7 +63,7 @@ class ScriptFromObject {
 		}
 
 		if (obj instanceof Array) {
-			obj.forEach((value,index) => {
+			obj.forEach((value, index) => {
 				this.traverse(value, path + "[" + index + "]");
 			});
 		} else {
@@ -85,29 +89,19 @@ class ScriptFromObject {
 
 	exportAsFunctionCall(options) {
 		var str = "(function(){//version 1\n";
-		str += this.getRawScript(this.objName, options);
+		str += this.getRawScript(options);
 		if (this.parent) str += `\n })()`;
 		else str += `\n return ${this.objName};\n})()`;
 		return str;
 	}
 
-	getRawScript(varName, options) {
+	getRawScript(options) {
 		options = options || {};
 
-		this.objectSet = new WeakSet();
+		if (this.parent) var str = "";
+		else var str = " var temp=[];\n var";
 
-		this.traverse(this.obj, varName);
-
-		if (this.parent) {
-			var str = "";
-		} else {
-			var str = " var temp=[];\n var";
-		}
-
-		str +=
-			` ${varName} = ` +
-			JSON.stringify(this.obj, this.JsonReplacer.bind(this)) +
-			";";
+		str += ` ${this.objName} = ` + this.stringified + ";";
 
 		// str += "\n//Circular references";
 		this.circularExpressions.forEach(([path, reference]) => {
