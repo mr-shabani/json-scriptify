@@ -9,8 +9,8 @@ var scriptify = function(obj, options) {
 	return script;
 };
 
-scriptify.withAllFunctions = function(obj) {
-	return scriptify(obj, { withAllFunctions: true });
-};
+// scriptify.withAllFunctions = function(obj) {
+// 	return scriptify(obj, { withAllFunctions: true });
+// };
 
 module.exports = scriptify;

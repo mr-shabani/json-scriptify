@@ -1,13 +1,11 @@
 var scriptify = require("../../");
 var checkSimilarity = require("../object_similarity");
 
-var run = function(obj, withFunctions) {
-	if (withFunctions) return eval(scriptify.withAllFunctions(obj));
+var run = function(obj) {
 	return eval(scriptify(obj));
 };
 
-var checkFor = function(obj, withFunctions) {
-	if (withFunctions) return checkSimilarity(obj, run(obj, withFunctions));
+var checkFor = function(obj) {
 	return checkSimilarity(obj, run(obj));
 };
 
@@ -27,5 +25,12 @@ test("circular reference to built-in objects", function() {
 	obj.m = new Map([[2,3]]);
 	obj.m.set(obj,obj.m);
 	obj.cm = obj.m;
+	expect(checkFor(obj)).toEqual(true);
+});
+
+test("circular reference to functions", function() {
+	var obj = {f:()=>1};
+	obj.m = new Map([[obj.f,obj.f]]);
+	obj.g =obj.f;
 	expect(checkFor(obj)).toEqual(true);
 });

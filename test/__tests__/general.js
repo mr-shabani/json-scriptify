@@ -1,13 +1,11 @@
 var scriptify = require("../../");
 var checkSimilarity = require("../object_similarity");
 
-var run = function(obj, withFunctions) {
-	if (withFunctions) return eval(scriptify.withAllFunctions(obj));
+var run = function(obj) {
 	return eval(scriptify(obj));
 };
 
-var checkFor = function(obj, withFunctions) {
-	if (withFunctions) return checkSimilarity(obj, run(obj, withFunctions));
+var checkFor = function(obj) {
 	return checkSimilarity(obj, run(obj));
 };
 
@@ -31,10 +29,10 @@ test("simple plain JSON object", function() {
 });
 
 test("plain JSON object with functions", function() {
-	expect(checkFor(function() {}, true)).toEqual(true);
-	expect(checkFor(() => 1, true)).toEqual(true);
-	expect(checkFor({ f: function() {} }, true)).toEqual(true);
-	expect(checkFor({ x: 1, f: () => 1 }, true)).toEqual(true);
+	expect(checkFor(function() {})).toEqual(true);
+	expect(checkFor(() => 1)).toEqual(true);
+	expect(checkFor({ f: function() {} })).toEqual(true);
+	expect(checkFor({ x: 1, f: () => 1 })).toEqual(true);
 });
 
 test("simple plain JSON object with special character in keys", function() {

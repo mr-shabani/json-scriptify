@@ -4,7 +4,6 @@ class ScriptFromObject {
 	constructor(obj, objName, parent) {
 		this.circularExpressions = [];
 		this.objectConstructors = [];
-		this.functionsList = [];
 		this.parent = parent;
 		if (parent) {
 			this.mark = parent.mark;
@@ -45,12 +44,8 @@ class ScriptFromObject {
 				return;
 			}
 		}
-		if (typeof obj == "function") {
-			this.functionsList.push([path, obj.toString()]);
-			return;
-		}
 
-		if (typeof obj != "object") return;
+		if (!["object", "function"].includes(typeof obj)) return;
 
 		if (this.mark.has(obj)) {
 			this.circularExpressions.push([path, this.mark.get(obj)]);
@@ -114,13 +109,6 @@ class ScriptFromObject {
 			else if (code) str += `\n ${path} = ${code};`;
 			else str += `\n ${path}`;
 		});
-
-		if (options.withAllFunctions) {
-			// str += "\n//Functions";
-			this.functionsList.forEach(([path, code]) => {
-				str += `\n ${path} = ${code};`;
-			});
-		}
 
 		// str += "\n//Circular references";
 		this.circularExpressions.forEach(([path, reference]) => {

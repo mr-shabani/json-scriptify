@@ -42,6 +42,17 @@ var classes = [
 		toScript: function(obj, getScript, varName) {
 			throw new TypeError("WeakMap cannot be scriptify!");
 		}
+	},
+	{
+		type: Function,
+		toScript: function(obj, getScript, varName) {
+			var entries = Object.entries(obj);
+			if (entries.length == 0) return obj.toString();
+			return {
+				empty: obj.toString(),
+				add: `${getScript(entries)}.forEach(([k,v])=>{${varName}[k]=v;})`
+			};
+		}
 	}
 ];
 

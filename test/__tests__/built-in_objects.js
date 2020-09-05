@@ -70,3 +70,11 @@ test("Set class with circular", function() {
 	set.add(obj);
 	expect(checkFor(obj)).toEqual(true);
 });
+
+test("function with properties", function() {
+	var obj = ()=>1;
+	obj.x = 1;
+	obj.f = obj;
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ f: obj })).toEqual(true);
+});
