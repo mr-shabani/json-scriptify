@@ -108,11 +108,6 @@ class ScriptFromObject {
 
 		str += ` ${this.objName} = ` + this.stringified + ";";
 
-		// str += "\n//Circular references";
-		this.circularExpressions.forEach(([path, reference]) => {
-			str += `\n ${path} = ${reference};`;
-		});
-
 		// str += "\n//Object constructors";
 		this.objectConstructors.forEach(([path, code, addExpression]) => {
 			if (addExpression) str += `\n ${path} = ${code}; ${addExpression}`;
@@ -126,6 +121,12 @@ class ScriptFromObject {
 				str += `\n ${path} = ${code};`;
 			});
 		}
+
+		// str += "\n//Circular references";
+		this.circularExpressions.forEach(([path, reference]) => {
+			str += `\n ${path} = ${reference};`;
+		});
+
 		return str;
 	}
 }

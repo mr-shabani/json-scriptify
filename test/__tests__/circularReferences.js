@@ -22,3 +22,10 @@ test("JSON object with circular references", function() {
 	expect(checkFor(obj, true)).toEqual(true);
 });
 
+test("circular reference to built-in objects", function() {
+	var obj = {};
+	obj.m = new Map([[2,3]]);
+	obj.m.set(obj,obj.m);
+	obj.cm = obj.m;
+	expect(checkFor(obj)).toEqual(true);
+});

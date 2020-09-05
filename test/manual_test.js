@@ -35,9 +35,16 @@ var obj = {
 obj.c = obj;
 obj.oo.o.c = obj.o;
 obj.o.c = obj.oo.o;
-obj.m.set(obj.m, obj.m);
+obj.m.set(obj.m, obj);
 obj.se.add(obj.m);
 obj.se.add(obj.se);
+
+obj = function(){return 1;};
+obj.x = 1;
+
+obj = {m: new Map([[2,3],[4,5]]),m2: new Map()};
+obj.m.set(obj,obj.m2);
+obj.cm = obj.m;
 
 var script = json_scriptify.withAllFunctions(obj);
 
