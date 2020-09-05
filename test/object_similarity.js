@@ -10,12 +10,12 @@ var checkSimilarity = function(obj1, obj2, ignoreFunctions) {
 		}
 	}
 
-
-	if (typeof obj1 != "object" || typeof obj2 != "object") {
+	if (typeof obj1 == "function" || typeof obj2 == "function") {
 		if (typeof obj1 == "function" && typeof obj2 == "function") {
 			if (ignoreFunctions) return true;
-			return obj1.toString() == obj2.toString();
-		}
+			if (obj1.toString() != obj2.toString()) return false;
+		} else return false;
+	} else if (typeof obj1 != "object" || typeof obj2 != "object") {
 		return obj1 == obj2;
 	}
 
