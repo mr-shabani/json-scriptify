@@ -46,4 +46,8 @@ var checkSimilarity = function(obj1, obj2, ignoreFunctions) {
 	return returnValue;
 };
 
-module.exports = checkSimilarity;
+var twoSidedSimilarity = function(obj1, obj2) {
+	return checkSimilarity(obj1, obj2) && checkSimilarity(obj2, obj1);
+};
+
+module.exports = twoSidedSimilarity;

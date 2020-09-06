@@ -27,7 +27,7 @@ test("simple object", function() {
 	expect(checkSimilarity({}, {})).toEqual(true);
 	expect(checkSimilarity({ x: 1 }, { x: 1 })).toEqual(true);
 	expect(checkSimilarity({ x: 1, y: 2 }, { x: 1 })).toEqual(false);
-	expect(checkSimilarity({ x: 1 }, { x: 1, y: 2 })).toEqual(true);
+	expect(checkSimilarity({ x: 1 }, { x: 1, y: 2 })).toEqual(false);
 	expect(checkSimilarity({ x: [1, 2] }, { x: [1, 2] })).toEqual(true);
 });
 
