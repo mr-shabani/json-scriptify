@@ -53,6 +53,45 @@ var classes = [
 				add: `${getScript(entries)}.forEach(([k,v])=>{${varName}[k]=v;})`
 			};
 		}
+	},
+	{
+		type: String,
+		toScript: function(obj, getScript, varName) {
+			var entries = Object.entries(obj);
+			const constructorScript = `new String(${JSON.stringify(obj)})`;
+			var objectEntries = entries.filter(([key, value]) => {
+				return !(0 <= key && key < obj.length);
+			});
+			if (objectEntries.length == 0) return constructorScript;
+			return {
+				empty: constructorScript,
+				add: `${getScript(objectEntries)}.forEach(([k,v])=>{${varName}[k]=v;})`
+			};
+		}
+	},
+	{
+		type: Number,
+		toScript: function(obj, getScript, varName) {
+			var objectEntries = Object.entries(obj);
+			const constructorScript = `new Number(${JSON.stringify(obj)})`;
+			if (objectEntries.length == 0) return constructorScript;
+			return {
+				empty: constructorScript,
+				add: `${getScript(objectEntries)}.forEach(([k,v])=>{${varName}[k]=v;})`
+			};
+		}
+	},
+	{
+		type: Boolean,
+		toScript: function(obj, getScript, varName) {
+			var objectEntries = Object.entries(obj);
+			const constructorScript = `new Boolean(${JSON.stringify(obj)})`;
+			if (objectEntries.length == 0) return constructorScript;
+			return {
+				empty: constructorScript,
+				add: `${getScript(objectEntries)}.forEach(([k,v])=>{${varName}[k]=v;})`
+			};
+		}
 	}
 ];
 

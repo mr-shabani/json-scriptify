@@ -78,3 +78,31 @@ test("function with properties", function() {
 	expect(checkFor(obj)).toEqual(true);
 	expect(checkFor({ f: obj })).toEqual(true);
 });
+
+test("String object with properties", function() {
+	var obj = new String("0123");
+	obj[4]='4';
+	obj[2n]='5';
+	obj.x = 1;
+	obj.c = obj;
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ s: obj })).toEqual(true);
+});
+
+test("Number object with properties", function() {
+	var obj = new Number(123);
+	obj[4]='4';
+	obj.x = 1;
+	obj.c = obj;
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ n: obj })).toEqual(true);
+});
+
+test("Boolean object with properties", function() {
+	var obj = new Boolean();
+	obj[true]='4';
+	obj.x = 1;
+	obj.c = obj;
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ b: obj })).toEqual(true);
+});
