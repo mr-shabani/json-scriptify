@@ -70,6 +70,7 @@ class ScriptFromObject {
 		}
 
 		Object.entries(obj).forEach(([key, value]) => {
+			if (String(parseInt(key)) == key && key != "NaN") key = parseInt(key);
 			this.traverse(value, path + "[" + JSON.stringify(key) + "]");
 		});
 	}
