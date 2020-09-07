@@ -1,8 +1,8 @@
 var classToPlainObject = require("./classToPlainObject");
 var typesSimilarityCheck = require("./typesSimilarityCheck");
 
-var checkSimilarity = function(obj1, obj2, ignoreFunctions) {
-	var mark = arguments[3] || new Map();
+var checkSimilarity = function(obj1, obj2) {
+	var mark = arguments[2] || new Map();
 
 	for (let type of typesSimilarityCheck) {
 		if (type.mustCheck(obj1, obj2)) {
@@ -10,14 +10,12 @@ var checkSimilarity = function(obj1, obj2, ignoreFunctions) {
 		}
 	}
 
-	if (typeof obj1 == "function" || typeof obj2 == "function") {
-		if (typeof obj1 == "function" && typeof obj2 == "function") {
-			if (ignoreFunctions) return true;
-			if (obj1.toString() != obj2.toString()) return false;
-		} else return false;
-	} else if (typeof obj1 != "object" || typeof obj2 != "object") {
+	typesThatWillBeCheckedLater = ["object", "function"];
+	if (
+		!typesThatWillBeCheckedLater.includes(typeof obj1) ||
+		!typesThatWillBeCheckedLater.includes(typeof obj2)
+	)
 		return obj1 == obj2;
-	}
 
 	if (mark.has(obj1)) return mark.get(obj1) == obj2;
 
@@ -31,7 +29,6 @@ var checkSimilarity = function(obj1, obj2, ignoreFunctions) {
 			return checkSimilarity(
 				cls.toPlainObject(obj1),
 				cls.toPlainObject(obj2),
-				ignoreFunctions,
 				mark
 			);
 		}
@@ -41,7 +38,7 @@ var checkSimilarity = function(obj1, obj2, ignoreFunctions) {
 	Object.entries(obj1).forEach(([key, value]) => {
 		if (returnValue)
 			returnValue =
-				returnValue && checkSimilarity(value, obj2[key], ignoreFunctions, mark);
+				returnValue && checkSimilarity(value, obj2[key], mark);
 	});
 	return returnValue;
 };

@@ -22,6 +22,14 @@ classes = [
 		toPlainObject: function(set) {
 			return Array.from(set).sort();
 		}
+	},
+	{
+		type: Function,
+		toPlainObject: function(func) {
+			var propertiesList = Object.entries(func);
+			propertiesList.push(func.toString());
+			return propertiesList;
+		}
 	}
 ];
 
