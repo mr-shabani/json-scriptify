@@ -27,8 +27,8 @@ var checkSimilarity = function(obj1, obj2) {
 				return false;
 			}
 			return checkSimilarity(
-				cls.toPlainObject(obj1),
-				cls.toPlainObject(obj2),
+				[cls.toPlainObject(obj1),Object.entries(obj1)],
+				[cls.toPlainObject(obj2),Object.entries(obj2)],
 				mark
 			);
 		}

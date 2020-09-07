@@ -26,9 +26,7 @@ classes = [
 	{
 		type: Function,
 		toPlainObject: function(func) {
-			var propertiesList = Object.entries(func);
-			propertiesList.push(func.toString());
-			return propertiesList;
+			return func.toString();
 		}
 	}
 ];

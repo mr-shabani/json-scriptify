@@ -2,7 +2,7 @@ types = [
 	{
 		mustCheck: (obj1, obj2) =>
 			typeof obj1 == "string" || typeof obj2 == "string",
-		isSimilar: (obj1, obj2) => obj1 == obj2
+		isSimilar: (obj1, obj2) => obj1 === obj2
 	},
 	{
 		mustCheck: (obj1, obj2) =>
