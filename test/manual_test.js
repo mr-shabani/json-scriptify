@@ -39,21 +39,8 @@ obj.m.set(obj.m, obj);
 obj.se.add(obj.m);
 obj.se.add(obj.se);
 
-obj = {
-	m: new Map([
-		[2, 3],
-		[4, 5]
-	]),
-	m2: new Map()
-};
-obj.m.set(obj, obj.m2);
-var f = function() {
-	return 1;
-};
-f.x =1;
-f.f = f;
-obj.m.set(f, f);
-obj.cm = obj.m;
+obj = [1,2];
+obj.x = 1;
 
 var script = json_scriptify(obj);
 // var script = json_scriptify.withAllFunctions(obj);

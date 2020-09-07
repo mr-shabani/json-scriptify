@@ -46,51 +46,31 @@ var classes = [
 	{
 		type: Function,
 		toScript: function(obj, getScript, varName) {
-			var entries = Object.entries(obj);
-			if (entries.length == 0) return obj.toString();
-			return {
-				empty: obj.toString(),
-				add: `${getScript(entries)}.forEach(([k,v])=>{${varName}[k]=v;})`
-			};
+			return obj.toString();
+		}
+	},
+	{
+		type: Array,
+		toScript: function(obj, getScript, varName) {
+			return;
 		}
 	},
 	{
 		type: String,
 		toScript: function(obj, getScript, varName) {
-			var entries = Object.entries(obj);
-			const constructorScript = `new String(${JSON.stringify(obj)})`;
-			var objectEntries = entries.filter(([key, value]) => {
-				return !(0 <= key && key < obj.length);
-			});
-			if (objectEntries.length == 0) return constructorScript;
-			return {
-				empty: constructorScript,
-				add: `${getScript(objectEntries)}.forEach(([k,v])=>{${varName}[k]=v;})`
-			};
+			return `new String(${JSON.stringify(obj)})`;
 		}
 	},
 	{
 		type: Number,
 		toScript: function(obj, getScript, varName) {
-			var objectEntries = Object.entries(obj);
-			const constructorScript = `new Number(${JSON.stringify(obj)})`;
-			if (objectEntries.length == 0) return constructorScript;
-			return {
-				empty: constructorScript,
-				add: `${getScript(objectEntries)}.forEach(([k,v])=>{${varName}[k]=v;})`
-			};
+			return `new Number(${JSON.stringify(obj)})`;
 		}
 	},
 	{
 		type: Boolean,
 		toScript: function(obj, getScript, varName) {
-			var objectEntries = Object.entries(obj);
-			const constructorScript = `new Boolean(${JSON.stringify(obj)})`;
-			if (objectEntries.length == 0) return constructorScript;
-			return {
-				empty: constructorScript,
-				add: `${getScript(objectEntries)}.forEach(([k,v])=>{${varName}[k]=v;})`
-			};
+			return `new Boolean(${JSON.stringify(obj)})`;
 		}
 	}
 ];

@@ -30,6 +30,7 @@ class ScriptFromObject {
 			}
 			this.objectSet.add(value);
 		}
+		if (value instanceof Array) return value;
 		for (let cls of classesToScript) {
 			if (value instanceof cls.type) return;
 		}
@@ -59,24 +60,37 @@ class ScriptFromObject {
 				var replacement = cls.toScript(obj, this.getScript.bind(this), path);
 				if (typeof replacement == "string") {
 					this.objectConstructors.push([path, replacement]);
-					return;
 				}
 				if (typeof replacement == "object") {
 					this.objectConstructors.splice(index, 0, [path, replacement.empty]);
 					this.objectConstructors.push([replacement.add]);
-					return;
 				}
+				this.makeScriptFromObjectProperties(obj, path);
 			}
 		}
 
-		if (obj instanceof Array) {
-			obj.forEach((value, index) => {
-				this.traverse(value, path + "[" + index + "]");
+		Object.entries(obj).forEach(([key, value]) => {
+			this.traverse(value, path + "[" + JSON.stringify(key) + "]");
+		});
+	}
+
+	makeScriptFromObjectProperties(obj, path) {
+		var objProperties = Object.entries(obj);
+		if (obj.length)
+			objProperties = objProperties.filter(([key, value]) => {
+				return !(0 <= key && key < obj.length);
+			});
+		if (objProperties.length <= 2) {
+			objProperties.forEach(([key, value]) => {
+				this.objectConstructors.push([
+					path + "[" + JSON.stringify(key) + "]",
+					this.getScript(value)
+				]);
 			});
 		} else {
-			Object.entries(obj).forEach(([key, value]) => {
-				this.traverse(value, path + "[" + JSON.stringify(key) + "]");
-			});
+			this.objectConstructors.push([
+				`${this.getScript(objProperties)}.forEach(([k,v])=>{${path}[k]=v;})`
+			]);
 		}
 	}
 
