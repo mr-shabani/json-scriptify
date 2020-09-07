@@ -151,3 +151,45 @@ test("NaN null undefined Infinity", function() {
 	expect(checkSimilarity("", obj1)).toEqual(false);
 	expect(checkSimilarity(false, obj1)).toEqual(false);
 });
+
+test("Number classes", function() {
+	let obj1 = new Number(1);
+	let obj2 = new Number(1);
+	expect(checkSimilarity(1, obj1)).toEqual(false);
+	expect(checkSimilarity(obj2, obj1)).toEqual(true);
+	obj1.x = 1;
+	expect(checkSimilarity(obj2, obj1)).toEqual(false);
+	obj2.x = 1;
+	expect(checkSimilarity(obj2, obj1)).toEqual(true);
+});
+
+
+test("String classes", function() {
+	let obj1 = new String('str');
+	let obj2 = new String('str');
+	expect(checkSimilarity('str', obj1)).toEqual(false);
+	expect(checkSimilarity(obj2, obj1)).toEqual(true);
+	obj1.x = 1;
+	expect(checkSimilarity(obj2, obj1)).toEqual(false);
+	obj2.x = 1;
+	expect(checkSimilarity(obj2, obj1)).toEqual(true);
+});
+
+test("Boolean classes", function() {
+	let obj1 = new Boolean(false);
+	let obj2 = new Boolean(false);
+	expect(checkSimilarity(false, obj1)).toEqual(false);
+	expect(checkSimilarity(obj2, obj1)).toEqual(true);
+	obj1.x = 1;
+	expect(checkSimilarity(obj2, obj1)).toEqual(false);
+	obj2.x = 1;
+	expect(checkSimilarity(obj2, obj1)).toEqual(true);
+	obj1 = new Boolean(true);
+	obj2 = new Boolean(true);
+	expect(checkSimilarity(true, obj1)).toEqual(false);
+	expect(checkSimilarity(obj2, obj1)).toEqual(true);
+	obj1.x = 1;
+	expect(checkSimilarity(obj2, obj1)).toEqual(false);
+	obj2.x = 1;
+	expect(checkSimilarity(obj2, obj1)).toEqual(true);
+});
