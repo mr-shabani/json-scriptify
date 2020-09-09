@@ -14,10 +14,12 @@ var classes = [
 	{
 		type: Map,
 		toScript: function(obj, getScript, varName) {
+			let mapContentArray = Array.from(obj);
+			if (mapContentArray.length == 0) return "new Map()";
 			return {
-				empty: `new Map()`,
+				empty: "new Map()",
 				add: `${getScript(
-					Array.from(obj)
+					mapContentArray
 				)}.forEach(([k,v])=>{${varName}.set(k,v);})`
 			};
 		}
@@ -25,9 +27,11 @@ var classes = [
 	{
 		type: Set,
 		toScript: function(obj, getScript, varName) {
+			let setContentArray = Array.from(obj);
+			if (setContentArray.length == 0) return "new Set()";
 			return {
-				empty: `new Set()`,
-				add: `${getScript(Array.from(obj))}.forEach((v)=>{${varName}.add(v);})`
+				empty: "new Set()",
+				add: `${getScript(setContentArray)}.forEach((v)=>{${varName}.add(v);})`
 			};
 		}
 	},
