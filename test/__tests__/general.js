@@ -52,4 +52,6 @@ test("simple plain JSON object with special character in keys", function() {
 	expect(checkFor(obj)).toEqual(true);
 	obj['"'] = obj;
 	expect(checkFor(obj)).toEqual(true);
+	obj[''] = obj;
+	expect(checkFor(obj)).toEqual(true);
 });

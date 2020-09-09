@@ -1,5 +1,19 @@
 var { classes: classesToScript, types: typesToScript } = require("./toScript");
 
+var addToPath = function(path, key) {
+	const alphabetCheckRegexp = /^[A-Za-z_]+$/;
+	if (String(parseInt(key)) == key && key != "NaN")
+		return path + "[" + parseInt(key) + "]";
+	if (alphabetCheckRegexp.test(key)) return path + "." + key;
+	return path + "[" + JSON.stringify(key) + "]";
+};
+
+var isInstanceOf = function(type, obj) {
+	if (typeof type == "string") return typeof obj == type;
+	if (obj instanceof type) return true;
+	return false;
+};
+
 class ScriptFromObject {
 	constructor(obj, objName, parent) {
 		this.circularExpressions = [];
@@ -56,7 +70,7 @@ class ScriptFromObject {
 		this.mark.set(obj, path);
 
 		for (let cls of classesToScript) {
-			if (this.isInstanceOf(cls.type, obj)) {
+			if (isInstanceOf(cls.type, obj)) {
 				var index = this.objectConstructors.length;
 				var replacement = cls.toScript(obj, this.getScript.bind(this), path);
 				if (typeof replacement == "string") {
@@ -71,8 +85,7 @@ class ScriptFromObject {
 		}
 
 		Object.entries(obj).forEach(([key, value]) => {
-			if (String(parseInt(key)) == key && key != "NaN") key = parseInt(key);
-			this.traverse(value, path + "[" + JSON.stringify(key) + "]");
+			this.traverse(value, addToPath(path, key));
 		});
 	}
 
@@ -86,10 +99,7 @@ class ScriptFromObject {
 			objProperties.forEach(([key, value]) => {
 				let valueScript = this.getScript(value);
 				if (!this.mark.has(value))
-					this.objectConstructors.push([
-						path + "[" + JSON.stringify(key) + "]",
-						valueScript
-					]);
+					this.objectConstructors.push([addToPath(path, key), valueScript]);
 			});
 		} else {
 			this.objectConstructors.push([
@@ -104,12 +114,6 @@ class ScriptFromObject {
 		this.objectConstructors.push([objScript.getRawScript()]);
 		this.tempIndex = objScript.tempIndex;
 		return tempVarName;
-	}
-
-	isInstanceOf(type, obj) {
-		if (typeof type == "string") return typeof obj == type;
-		if (obj instanceof type) return true;
-		return false;
 	}
 
 	exportAsFunctionCall(options) {
