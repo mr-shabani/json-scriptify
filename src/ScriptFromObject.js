@@ -84,10 +84,12 @@ class ScriptFromObject {
 			});
 		if (objProperties.length <= 2) {
 			objProperties.forEach(([key, value]) => {
-				this.objectConstructors.push([
-					path + "[" + JSON.stringify(key) + "]",
-					this.getScript(value)
-				]);
+				let valueScript = this.getScript(value);
+				if (!this.mark.has(value))
+					this.objectConstructors.push([
+						path + "[" + JSON.stringify(key) + "]",
+						valueScript
+					]);
 			});
 		} else {
 			this.objectConstructors.push([
