@@ -34,17 +34,47 @@ var checkSimilarity = function(obj1, obj2) {
 				return false;
 			}
 			return checkSimilarity(
-				[cls.toPlainObject(obj1), Object.entries(obj1)],
-				[cls.toPlainObject(obj2), Object.entries(obj2)],
+				[cls.toPlainObject(obj1), Object.getOwnPropertyDescriptors(obj1)],
+				[cls.toPlainObject(obj2), Object.getOwnPropertyDescriptors(obj2)],
 				mark
 			);
 		}
 	}
 
 	var returnValue = true;
-	Object.entries(obj1).forEach(([key, value]) => {
-		if (returnValue)
-			returnValue = returnValue && checkSimilarity(value, obj2[key], mark);
+	var descriptor1 = Object.getOwnPropertyDescriptors(obj1);
+	var descriptor2 = Object.getOwnPropertyDescriptors(obj2);
+	Object.getOwnPropertyNames(descriptor1).forEach(key => {
+		if (!returnValue) return;
+		if(!descriptor2.hasOwnProperty(key)){
+			returnValue = false;
+			return;
+		}
+		returnValue =
+			descriptor1[key].writable == descriptor2[key].writable &&
+			descriptor1[key].configurable == descriptor2[key].configurable &&
+			descriptor1[key].enumerable == descriptor2[key].enumerable;
+		returnValue = returnValue && checkSimilarity(
+			descriptor1[key].value,
+			descriptor2[key].value,
+			mark
+		);
+	});
+	Object.getOwnPropertySymbols(descriptor1).forEach(key => {
+		if (!returnValue) return;
+		if(!descriptor2.hasOwnProperty(key)){
+			returnValue = false;
+			return;
+		}
+		returnValue =
+			descriptor1[key].writable == descriptor2[key].writable &&
+			descriptor1[key].configurable == descriptor2[key].configurable &&
+			descriptor1[key].enumerable == descriptor2[key].enumerable;
+		returnValue = returnValue && checkSimilarity(
+			descriptor1[key].value,
+			descriptor2[key].value,
+			mark
+		);
 	});
 	return returnValue;
 };
