@@ -28,6 +28,12 @@ classes = [
 		toPlainObject: function(func) {
 			return func.toString();
 		}
+	},
+	{
+		type: Symbol,
+		toPlainObject: function(sym) {
+			return sym.valueOf();
+		}
 	}
 ];
 

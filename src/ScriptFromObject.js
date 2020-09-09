@@ -9,7 +9,7 @@ class ScriptFromObject {
 			this.mark = parent.mark;
 			this.tempIndex = parent.tempIndex;
 		} else {
-			this.mark = new WeakMap();
+			this.mark = new Map();
 			this.tempIndex = 0;
 		}
 		this.objName = objName || "obj";
@@ -22,7 +22,7 @@ class ScriptFromObject {
 
 	JsonReplacer(key, value) {
 		for (let type of typesToScript) {
-			if (type.is(value)) return;
+			if (type.isTypeOf(value)) return;
 		}
 		if (typeof value == "object") {
 			if (this.objectSet.has(value)) {
@@ -32,30 +32,31 @@ class ScriptFromObject {
 		}
 		if (value instanceof Array) return value;
 		for (let cls of classesToScript) {
-			if (value instanceof cls.type) return;
+			if (typeof cls.type == "function" && value instanceof cls.type) return;
 		}
 		return value;
 	}
 
 	traverse(obj, path) {
 		for (let type of typesToScript) {
-			if (type.is(obj)) {
+			if (type.isTypeOf(obj)) {
 				const replacement = type.toScript(obj);
 				this.objectConstructors.push([path, replacement]);
 				return;
 			}
 		}
 
-		if (!["object", "function"].includes(typeof obj)) return;
+		if (!["object", "function", "symbol"].includes(typeof obj)) return;
 
 		if (this.mark.has(obj)) {
 			this.circularExpressions.push([path, this.mark.get(obj)]);
 			return;
 		}
+
 		this.mark.set(obj, path);
 
 		for (let cls of classesToScript) {
-			if (obj instanceof cls.type) {
+			if (this.isInstanceOf(cls.type, obj)) {
 				var index = this.objectConstructors.length;
 				var replacement = cls.toScript(obj, this.getScript.bind(this), path);
 				if (typeof replacement == "string") {
@@ -100,6 +101,12 @@ class ScriptFromObject {
 		let objScript = new ScriptFromObject(obj, tempVarName, this);
 		this.objectConstructors.push([objScript.getRawScript()]);
 		return tempVarName;
+	}
+
+	isInstanceOf(type, obj) {
+		if (typeof type == "string") return typeof obj == type;
+		if (obj instanceof type) return true;
+		return false;
 	}
 
 	exportAsFunctionCall(options) {

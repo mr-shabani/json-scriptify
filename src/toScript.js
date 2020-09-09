@@ -72,42 +72,55 @@ var classes = [
 		toScript: function(obj, getScript, varName) {
 			return `new Boolean(${JSON.stringify(obj)})`;
 		}
+	},
+	{
+		type: "symbol",
+		toScript: function(obj) {
+			let symbolDescription = String(obj).slice(7, -1);
+			return `Symbol("${symbolDescription}")`;
+		}
+	},
+	{
+		type: Symbol,
+		toScript: function(obj, getScript) {
+			return `Object(${getScript(obj.valueOf())})`;
+		}
 	}
 ];
 
 var types = [
 	{
-		is: obj => typeof obj == "bigint",
+		isTypeOf: obj => typeof obj == "bigint",
 		toScript: function(obj) {
 			return `BigInt(${obj.toString()})`;
 		}
 	},
 	{
-		is: obj => Object.is(obj, null),
+		isTypeOf: obj => Object.is(obj, null),
 		toScript: function(obj) {
 			return "null";
 		}
 	},
 	{
-		is: obj => Object.is(obj, undefined),
+		isTypeOf: obj => Object.is(obj, undefined),
 		toScript: function(obj) {
 			return "undefined";
 		}
 	},
 	{
-		is: obj => Object.is(obj, NaN),
+		isTypeOf: obj => Object.is(obj, NaN),
 		toScript: function(obj) {
 			return "NaN";
 		}
 	},
 	{
-		is: obj => Object.is(obj, Infinity),
+		isTypeOf: obj => Object.is(obj, Infinity),
 		toScript: function(obj) {
 			return "Infinity";
 		}
 	},
 	{
-		is: obj => Object.is(obj, -Infinity),
+		isTypeOf: obj => Object.is(obj, -Infinity),
 		toScript: function(obj) {
 			return "-Infinity";
 		}
