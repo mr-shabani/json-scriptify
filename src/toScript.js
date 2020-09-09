@@ -72,6 +72,12 @@ var classes = [
 		}
 	},
 	{
+		type: BigInt,
+		toScript: function(obj, getScript, varName) {
+			return `Object(BigInt(${obj.valueOf().toString()}))`;
+		}
+	},
+	{
 		type: Boolean,
 		toScript: function(obj, getScript, varName) {
 			return `new Boolean(${JSON.stringify(obj)})`;

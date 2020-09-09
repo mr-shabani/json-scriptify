@@ -107,6 +107,15 @@ test("Boolean object with properties", function() {
 	expect(checkFor({ b: obj })).toEqual(true);
 });
 
+test("BigInt object with properties", function() {
+	var obj = Object(BigInt(10));
+	obj[true] = "4";
+	obj.x = 1;
+	obj.c = obj;
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ BI: obj })).toEqual(true);
+});
+
 test("Symbol type", function() {
 	var obj = Symbol("test");
 	expect(checkFor(obj)).toEqual(true);
