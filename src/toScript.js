@@ -82,7 +82,7 @@ var classes = [
 	},
 	{
 		type: Symbol,
-		toScript: function(obj, getScript) {
+		toScript: function(obj, getScript, varName) {
 			return `Object(${getScript(obj.valueOf())})`;
 		}
 	}

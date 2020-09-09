@@ -72,7 +72,7 @@ test("Set class with circular", function() {
 });
 
 test("function with properties", function() {
-	var obj = ()=>1;
+	var obj = () => 1;
 	obj.x = 1;
 	obj.f = obj;
 	expect(checkFor(obj)).toEqual(true);
@@ -81,8 +81,8 @@ test("function with properties", function() {
 
 test("String object with properties", function() {
 	var obj = new String("0123");
-	obj[4]='4';
-	obj[2n]='5';
+	obj[4] = "4";
+	obj[2n] = "5";
 	obj.x = 1;
 	obj.c = obj;
 	expect(checkFor(obj)).toEqual(true);
@@ -91,7 +91,7 @@ test("String object with properties", function() {
 
 test("Number object with properties", function() {
 	var obj = new Number(123);
-	obj[4]='4';
+	obj[4] = "4";
 	obj.x = 1;
 	obj.c = obj;
 	expect(checkFor(obj)).toEqual(true);
@@ -100,9 +100,24 @@ test("Number object with properties", function() {
 
 test("Boolean object with properties", function() {
 	var obj = new Boolean();
-	obj[true]='4';
+	obj[true] = "4";
 	obj.x = 1;
 	obj.c = obj;
 	expect(checkFor(obj)).toEqual(true);
 	expect(checkFor({ b: obj })).toEqual(true);
+});
+
+test("Symbol type", function() {
+	var obj = Symbol("test");
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ sym: obj, sym2: obj })).toEqual(true);
+});
+
+test("Symbol object class", function() {
+	var sym = Symbol("test");
+	var obj = Object(sym);
+	obj.s = sym;
+	obj.s2 = Symbol("test2");
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ sym: obj, sym2: obj.s2 })).toEqual(true);
 });
