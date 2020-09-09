@@ -100,6 +100,7 @@ class ScriptFromObject {
 		let tempVarName = `temp[${this.tempIndex++}]`;
 		let objScript = new ScriptFromObject(obj, tempVarName, this);
 		this.objectConstructors.push([objScript.getRawScript()]);
+		this.tempIndex = objScript.tempIndex;
 		return tempVarName;
 	}
 
