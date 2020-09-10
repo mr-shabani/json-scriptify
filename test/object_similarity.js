@@ -46,7 +46,7 @@ var checkSimilarity = function(obj1, obj2) {
 	var descriptor2 = Object.getOwnPropertyDescriptors(obj2);
 	Object.getOwnPropertyNames(descriptor1).forEach(key => {
 		if (!returnValue) return;
-		if(!descriptor2.hasOwnProperty(key)){
+		if (!descriptor2.hasOwnProperty(key)) {
 			returnValue = false;
 			return;
 		}
@@ -54,27 +54,18 @@ var checkSimilarity = function(obj1, obj2) {
 			descriptor1[key].writable == descriptor2[key].writable &&
 			descriptor1[key].configurable == descriptor2[key].configurable &&
 			descriptor1[key].enumerable == descriptor2[key].enumerable;
-		returnValue = returnValue && checkSimilarity(
-			descriptor1[key].value,
-			descriptor2[key].value,
-			mark
-		);
+		returnValue =
+			returnValue &&
+			checkSimilarity(descriptor1[key].value, descriptor2[key].value, mark);
 	});
-	Object.getOwnPropertySymbols(descriptor1).forEach(key => {
+	var symbolKeys1 = Object.getOwnPropertySymbols(descriptor1);
+	var symbolKeys2 = Object.getOwnPropertySymbols(descriptor2);
+	symbolKeys1.forEach((key, index) => {
 		if (!returnValue) return;
-		if(!descriptor2.hasOwnProperty(key)){
-			returnValue = false;
-			return;
-		}
+		var key2 = symbolKeys2[index];
 		returnValue =
-			descriptor1[key].writable == descriptor2[key].writable &&
-			descriptor1[key].configurable == descriptor2[key].configurable &&
-			descriptor1[key].enumerable == descriptor2[key].enumerable;
-		returnValue = returnValue && checkSimilarity(
-			descriptor1[key].value,
-			descriptor2[key].value,
-			mark
-		);
+			returnValue &&
+			checkSimilarity([key,descriptor1[key]], [key2,descriptor2[key2]], mark);
 	});
 	return returnValue;
 };
