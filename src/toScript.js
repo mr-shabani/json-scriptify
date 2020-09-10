@@ -13,73 +13,75 @@ var classes = [
 	},
 	{
 		type: Map,
-		toScript: function(obj, getScript, varName) {
+		toScript: function(obj, getScript) {
 			let mapContentArray = Array.from(obj);
 			if (mapContentArray.length == 0) return "new Map()";
+			let mapContentArrayScript = getScript(mapContentArray);
 			return {
 				empty: "new Map()",
-				add: `${getScript(
-					mapContentArray
-				)}.forEach(([k,v])=>{${varName}.set(k,v);})`
+				add: varName =>
+					`${mapContentArrayScript}.forEach(([k,v])=>{${varName}.set(k,v);})`
 			};
 		}
 	},
 	{
 		type: Set,
-		toScript: function(obj, getScript, varName) {
+		toScript: function(obj, getScript) {
 			let setContentArray = Array.from(obj);
 			if (setContentArray.length == 0) return "new Set()";
+			let setContentArrayScript = getScript(setContentArray);
 			return {
 				empty: "new Set()",
-				add: `${getScript(setContentArray)}.forEach((v)=>{${varName}.add(v);})`
+				add: varName =>
+					`${setContentArrayScript}.forEach((v)=>{${varName}.add(v);})`
 			};
 		}
 	},
 	{
 		type: WeakSet,
-		toScript: function(obj, getScript, varName) {
+		toScript: function(obj, getScript) {
 			throw new TypeError("WeakSet cannot be scriptify!");
 		}
 	},
 	{
 		type: WeakMap,
-		toScript: function(obj, getScript, varName) {
+		toScript: function(obj, getScript) {
 			throw new TypeError("WeakMap cannot be scriptify!");
 		}
 	},
 	{
 		type: Function,
-		toScript: function(obj, getScript, varName) {
+		toScript: function(obj, getScript) {
 			return obj.toString();
 		}
 	},
 	{
 		type: Array,
-		toScript: function(obj, getScript, varName) {
+		toScript: function(obj, getScript) {
 			return;
 		}
 	},
 	{
 		type: String,
-		toScript: function(obj, getScript, varName) {
+		toScript: function(obj, getScript) {
 			return `new String(${JSON.stringify(obj)})`;
 		}
 	},
 	{
 		type: Number,
-		toScript: function(obj, getScript, varName) {
+		toScript: function(obj, getScript) {
 			return `new Number(${JSON.stringify(obj)})`;
 		}
 	},
 	{
 		type: BigInt,
-		toScript: function(obj, getScript, varName) {
+		toScript: function(obj, getScript) {
 			return `Object(BigInt(${obj.valueOf().toString()}))`;
 		}
 	},
 	{
 		type: Boolean,
-		toScript: function(obj, getScript, varName) {
+		toScript: function(obj, getScript) {
 			return `new Boolean(${JSON.stringify(obj)})`;
 		}
 	},
@@ -92,7 +94,7 @@ var classes = [
 	},
 	{
 		type: Symbol,
-		toScript: function(obj, getScript, varName) {
+		toScript: function(obj, getScript) {
 			return `Object(${getScript(obj.valueOf())})`;
 		}
 	}

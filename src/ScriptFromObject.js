@@ -78,7 +78,7 @@ class ScriptFromObject {
 				}
 				if (typeof replacement == "object") {
 					this.objectConstructors.splice(index, 0, [path, replacement.empty]);
-					this.objectConstructors.push([replacement.add]);
+					this.objectConstructors.push([replacement.add(path)]);
 				}
 				this.makeScriptFromObjectProperties(obj, path);
 			}
