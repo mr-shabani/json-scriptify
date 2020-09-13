@@ -187,8 +187,21 @@ class ScriptFromObject {
 	}
 
 	getScript(obj) {
+		let markSize = this.mark.size;
 		let tempVarName = `temp[${this.tempIndex++}]`;
 		let objScript = new ScriptFromObject(obj, tempVarName, this);
+		if (this.mark.size == markSize) {
+			if (objScript.objectConstructors.length == 0) {
+				if (objScript.circularExpressions.length == 0)
+					return objScript.stringified;
+				if (objScript.circularExpressions.length == 1)
+					return objScript.circularExpressions[0][1];
+			}
+			if (objScript.circularExpressions.length == 0) {
+				if (objScript.objectConstructors.length == 1)
+					return objScript.objectConstructors[0][1];
+			}
+		}
 		this.objectConstructors.push([objScript.getRawScript()]);
 		this.tempIndex = objScript.tempIndex;
 		return tempVarName;
