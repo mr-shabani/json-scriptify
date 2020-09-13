@@ -107,10 +107,12 @@ var classes = [
 			var scriptIndex = 0;
 			obj.forEach((element, index) => {
 				if (lastIndex != index - 1) {
-					script[scriptIndex] = script[scriptIndex].substr(
-						0,
-						script[scriptIndex].length - 1
-					);
+					const length = script[scriptIndex].length;
+					if (script[scriptIndex][length - 1] == ",")
+						script[scriptIndex] = script[scriptIndex].substr(
+							0,
+							script[scriptIndex].length - 1
+						);
 					script[scriptIndex] += scriptIndex == 0 ? "]" : ")";
 					script[++scriptIndex] = `.length = ${index}`;
 					script[++scriptIndex] = `.push(`;
@@ -118,10 +120,12 @@ var classes = [
 				script[scriptIndex] += getScript(element) + ",";
 				lastIndex = index;
 			});
-			script[scriptIndex] = script[scriptIndex].substr(
-				0,
-				script[scriptIndex].length - 1
-			);
+			const length = script[scriptIndex].length;
+			if (script[scriptIndex][length - 1] == ",")
+				script[scriptIndex] = script[scriptIndex].substr(
+					0,
+					script[scriptIndex].length - 1
+				);
 			script[scriptIndex] += scriptIndex == 0 ? "]" : ")";
 			return script.map((scriptText, index) => {
 				if (index == 0) return scriptText;
