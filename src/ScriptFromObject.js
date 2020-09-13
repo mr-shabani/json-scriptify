@@ -22,13 +22,18 @@ class ScriptFromObject {
 		if (parent) {
 			this.mark = parent.mark;
 			this.tempIndex = parent.tempIndex;
+			this.objectSet = new WeakSet(
+				Array.from(this.mark)
+					.map(([object, path]) => object)
+					.filter(object => typeof object == "object")
+			);
 		} else {
 			this.mark = new Map();
 			this.tempIndex = 0;
+			this.objectSet = new WeakSet();
 		}
 		this.objName = objName || "obj";
 
-		this.objectSet = new WeakSet();
 		this.stringified = JSON.stringify(obj, this.JsonReplacer.bind(this));
 
 		this.traverse(obj, this.objName);
@@ -44,7 +49,6 @@ class ScriptFromObject {
 			}
 			this.objectSet.add(value);
 		}
-		if (value instanceof Array) return value;
 		for (let cls of classesToScript) {
 			if (typeof cls.type == "function" && value instanceof cls.type) return;
 		}
@@ -69,43 +73,117 @@ class ScriptFromObject {
 
 		this.mark.set(obj, path);
 
+		var ignoreProperties = [];
 		for (let cls of classesToScript) {
 			if (isInstanceOf(cls.type, obj)) {
 				var index = this.objectConstructors.length;
-				var replacement = cls.toScript(obj, this.getScript.bind(this), path);
-				if (typeof replacement == "string") {
-					this.objectConstructors.push([path, replacement]);
+				var expression = cls.toScript(obj, this.getScript.bind(this), path);
+				ignoreProperties = cls.ignoreProperties || [];
+				if (typeof expression == "string") {
+					this.objectConstructors.push([path, expression]);
 				}
-				if (typeof replacement == "object") {
-					this.objectConstructors.splice(index, 0, [path, replacement.empty]);
-					this.objectConstructors.push([replacement.add(path)]);
+				if (typeof expression == "function") {
+					this.objectConstructors.push([expression(path)]);
 				}
-				this.makeScriptFromObjectProperties(obj, path);
+				if (expression instanceof Array) {
+					expression.forEach(expr => {
+						if (typeof expr == "string") {
+							this.objectConstructors.push([path, expr]);
+						}
+						if (typeof expr == "function") {
+							this.objectConstructors.push([expr(path)]);
+						}
+					});
+				} else if (typeof expression == "object") {
+					this.objectConstructors.splice(index, 0, [path, expression.empty]);
+					this.objectConstructors.push([expression.add(path)]);
+				}
 			}
 		}
 
-		Object.entries(obj).forEach(([key, value]) => {
-			this.traverse(value, addToPath(path, key));
-		});
+		this.makeScriptFromObjectProperties(obj, path, ignoreProperties);
 	}
 
-	makeScriptFromObjectProperties(obj, path) {
-		var objProperties = Object.entries(obj);
-		if (obj.length)
-			objProperties = objProperties.filter(([key, value]) => {
-				return !(0 <= key && key < obj.length);
-			});
-		if (objProperties.length <= 2) {
-			objProperties.forEach(([key, value]) => {
-				let valueScript = this.getScript(value);
-				if (!this.mark.has(value))
-					this.objectConstructors.push([addToPath(path, key), valueScript]);
-			});
-		} else {
-			this.objectConstructors.push([
-				`${this.getScript(objProperties)}.forEach(([k,v])=>{${path}[k]=v;})`
-			]);
-		}
+	makeScriptFromObjectProperties(obj, path, ignoreProperties) {
+		var allPropertyKeys = Object.getOwnPropertyNames(obj).concat(
+			Object.getOwnPropertySymbols(obj)
+		);
+
+		var propertiesWithDescriptionOf = {};
+
+		allPropertyKeys.forEach(key => {
+			if (ignoreProperties.includes(key)) return;
+
+			var descriptor = Object.getOwnPropertyDescriptor(obj, key);
+
+			let descriptionsText = `${descriptor.enumerable} ${descriptor.writable} ${descriptor.configurable}`;
+
+			if (propertiesWithDescriptionOf[descriptionsText])
+				propertiesWithDescriptionOf[descriptionsText].push([
+					key,
+					descriptor.value
+				]);
+			else {
+				propertiesWithDescriptionOf[descriptionsText] = [
+					[key, descriptor.value]
+				];
+			}
+		});
+
+		const descriptionList = ["enumerable", "writable", "configurable"];
+
+		var allExistDescriptionsText = Object.keys(propertiesWithDescriptionOf);
+
+		allExistDescriptionsText.forEach(descriptionsText => {
+			if (descriptionsText == "true true true") {
+				if (propertiesWithDescriptionOf["true true true"].length < 3) {
+					propertiesWithDescriptionOf["true true true"].forEach(
+						([key, value]) => {
+							const pathScript =
+								typeof key == "symbol"
+									? path + "[" + this.getScript(key) + "]"
+									: addToPath(path, key);
+							const valueScript = this.getScript(value);
+							this.objectConstructors.push([pathScript, valueScript]);
+						}
+					);
+				} else {
+					this.objectConstructors.push([
+						`${this.getScript(
+							propertiesWithDescriptionOf["true true true"]
+						)}.forEach(([k,v])=>{${path}[k]=v;})`
+					]);
+				}
+			} else {
+				let descriptor = descriptionsText
+					.split(" ")
+					.map((value, ind) => {
+						if (value == "true") return descriptionList[ind] + ":" + value;
+					})
+					.filter(x => x)
+					.join(",");
+				if (propertiesWithDescriptionOf[descriptionsText].length < 3) {
+					propertiesWithDescriptionOf[descriptionsText].forEach(
+						([key, value]) => {
+							const valueScript = this.getScript(value);
+							const addPropertyScript =
+								typeof key == "symbol"
+									? `Object.defineProperty(${path},${this.getScript(
+											key
+									  )},{value:${valueScript},${descriptor}})`
+									: `Object.defineProperty(${path},'${key}',{value:${valueScript},${descriptor}})`;
+							this.objectConstructors.push([addPropertyScript]);
+						}
+					);
+				} else {
+					this.objectConstructors.push([
+						`${this.getScript(
+							propertiesWithDescriptionOf[descriptionsText]
+						)}.forEach(([k,v])=>{Object.defineProperty(${path},k,{value:v,${descriptor}});})`
+					]);
+				}
+			}
+		});
 	}
 
 	getScript(obj) {
