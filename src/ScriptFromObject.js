@@ -202,7 +202,10 @@ class ScriptFromObject {
 					return objScript.objectConstructors[0][1];
 			}
 		}
-		this.objectConstructors.push([objScript.getRawScript()]);
+		if(objScript.stringified!=undefined)
+			this.objectConstructors.push([tempVarName,objScript.stringified]);
+		this.objectConstructors.push(...objScript.objectConstructors);
+		this.objectConstructors.push(...objScript.circularExpressions);
 		this.tempIndex = objScript.tempIndex;
 		return tempVarName;
 	}
@@ -218,21 +221,25 @@ class ScriptFromObject {
 	getRawScript(options) {
 		options = options || {};
 
-		if (this.parent) var str = "";
-		else var str = " var temp=[];\n var";
+		var str = "";
+		if (this.parent) {
+			if (this.stringified != undefined)
+				str += `${this.objName} = ` + this.stringified + ";\n";
+		} else {
+			str += ` var temp=[];\n var ${this.objName}`;
+			if (this.stringified != undefined) str += "=" + this.stringified;
+			str += ";\n";
+		}
 
-		str += ` ${this.objName} = ` + this.stringified + ";";
-
-		// str += "\n//Object constructors";
-		this.objectConstructors.forEach(([path, code, addExpression]) => {
-			if (addExpression) str += `\n ${path} = ${code}; ${addExpression}`;
-			else if (code) str += `\n ${path} = ${code};`;
-			else str += `\n ${path}`;
+		// str += "//Object constructors\n";
+		this.objectConstructors.forEach(([path, code]) => {
+			if (code) str += `${path} = ${code};\n`;
+			else str += `${path};\n`;
 		});
 
-		// str += "\n//Circular references";
+		// str += "//Circular references\n";
 		this.circularExpressions.forEach(([path, reference]) => {
-			str += `\n ${path} = ${reference};`;
+			str += `${path} = ${reference};\n`;
 		});
 
 		return str;
