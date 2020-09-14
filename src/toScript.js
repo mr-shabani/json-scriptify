@@ -1,21 +1,4 @@
-var isEmptyObject = function(obj) {
-	if (typeof obj != "object") return false;
-	if (Object.is(obj, null)) return false;
-	if (obj.__proto__ !== Object.prototype) return false;
-	if (Object.getOwnPropertyNames(obj).length > 0) return false;
-	if (Object.getOwnPropertySymbols(obj).length > 0) return false;
-	return true;
-};
-var objectHasOnly = function(obj, props) {
-	if (typeof obj != "object") return false;
-	if (Object.is(obj, null)) return false;
-	if (obj.__proto__ !== Object.prototype) return false;
-	if (Object.getOwnPropertyNames(obj).some(key => obj[key] != props[key]))
-		return false;
-	if (Object.getOwnPropertySymbols(obj).some(key => obj[key] != props[key]))
-		return false;
-	return true;
-};
+var { objectHasOnly, isEmptyObject, addToPath } = require("./helper");
 var classes = [
 	{
 		type: Date,
@@ -96,13 +79,13 @@ var classes = [
 	},
 	{
 		type: Array,
-		toScript: function(obj, getScript) {
+		toScript: function(obj, getScript, path) {
 			this.ignoreProperties = ["length"];
 			obj.forEach((element, index) => {
 				this.ignoreProperties.push(index.toString());
 			});
 			var script = [];
-			script[0] = "[";
+			script[0] = "";
 			var lastIndex = -1;
 			var scriptIndex = 0;
 			obj.forEach((element, index) => {
@@ -113,11 +96,11 @@ var classes = [
 							0,
 							script[scriptIndex].length - 1
 						);
-					script[scriptIndex] += scriptIndex == 0 ? "]" : ")";
 					script[++scriptIndex] = `.length = ${index}`;
-					script[++scriptIndex] = `.push(`;
+					script[++scriptIndex] = "";
 				}
-				script[scriptIndex] += getScript(element) + ",";
+				script[scriptIndex] +=
+					getScript(element, addToPath(path, scriptIndex)) + ",";
 				lastIndex = index;
 			});
 			const length = script[scriptIndex].length;
@@ -126,11 +109,13 @@ var classes = [
 					0,
 					script[scriptIndex].length - 1
 				);
-			script[scriptIndex] += scriptIndex == 0 ? "]" : ")";
-			return script.map((scriptText, index) => {
-				if (index == 0) return scriptText;
-				return varName => varName + scriptText;
-			});
+			return {
+				empty: "[]",
+				add: script.map((scriptText, index) => {
+					// if (index == 0) return `[${scriptText}]`;
+					return varName => `${varName}.push(${scriptText})`;
+				})
+			};
 		}
 	},
 	{

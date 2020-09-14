@@ -1,19 +1,5 @@
 var { classes: classesToScript, types: typesToScript } = require("./toScript");
-
-var addToPath = function(path, key) {
-	const alphabetCheckRegexp = /^[A-Za-z_]+$/;
-	if (String(parseInt(key)) == key && key != "NaN")
-		return path + "[" + parseInt(key) + "]";
-	if (alphabetCheckRegexp.test(key)) return path + "." + key;
-	return path + "[" + JSON.stringify(key) + "]";
-};
-
-var isInstanceOf = function(type, obj) {
-	if (typeof type == "string") return typeof obj == type;
-	if (obj instanceof type) return true;
-	return false;
-};
-
+var { addToPath, isInstanceOf } = require("./helper");
 class ScriptFromObject {
 	constructor(obj, objName, parent) {
 		this.circularExpressions = [];
@@ -96,7 +82,16 @@ class ScriptFromObject {
 					});
 				} else if (typeof expression == "object") {
 					this.objectConstructors.splice(index, 0, [path, expression.empty]);
-					this.objectConstructors.push([expression.add(path)]);
+					if (expression.add instanceof Array == false)
+						expression.add = [expression.add];
+					expression.add.forEach(expr => {
+						if (typeof expr == "string") {
+							this.objectConstructors.push([path, expr]);
+						}
+						if (typeof expr == "function") {
+							this.objectConstructors.push([expr(path)]);
+						}
+					});
 				}
 			}
 		}
@@ -186,7 +181,7 @@ class ScriptFromObject {
 		});
 	}
 
-	getScript(obj) {
+	getScript(obj, path) {
 		let markSize = this.mark.size;
 		let tempVarName = `temp[${this.tempIndex++}]`;
 		let objScript = new ScriptFromObject(obj, tempVarName, this);
@@ -197,13 +192,18 @@ class ScriptFromObject {
 				if (objScript.circularExpressions.length == 1)
 					return objScript.circularExpressions[0][1];
 			}
-			if (objScript.circularExpressions.length == 0) {
-				if (objScript.objectConstructors.length == 1)
-					return objScript.objectConstructors[0][1];
-			}
 		}
-		if(objScript.stringified!=undefined)
-			this.objectConstructors.push([tempVarName,objScript.stringified]);
+		// if (path) {
+		// 	if (objScript.circularExpressions.length == 0)
+		// 		if (objScript.objectConstructors.length == 1)
+		// 			return objScript.objectConstructors[0][1];
+		// 	if (objScript.objectConstructors.length == 0) {
+		// 		if (objScript.circularExpressions.length == 0)
+		// 			return objScript.stringified;
+		// 	}
+		// }
+		if (objScript.stringified != undefined)
+			this.objectConstructors.push([tempVarName, objScript.stringified]);
 		this.objectConstructors.push(...objScript.objectConstructors);
 		this.objectConstructors.push(...objScript.circularExpressions);
 		this.tempIndex = objScript.tempIndex;
