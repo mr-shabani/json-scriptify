@@ -80,8 +80,8 @@ var classes = [
 	{
 		type: Array,
 		toScript: function(obj, getScript, path) {
-			var script = [];
-			script[0] = "";
+			var hasSelfLoop = false;
+			var script = [""];
 			var lastIndex = -1;
 			var scriptIndex = 0;
 			obj.forEach((element, index) => {
@@ -95,8 +95,9 @@ var classes = [
 					script[++scriptIndex] = `.length = ${index}`;
 					script[++scriptIndex] = "";
 				}
-				script[scriptIndex] +=
-					getScript(element, addToPath(path, scriptIndex)) + ",";
+				script[scriptIndex] += getScript(element, path) + ",";
+				if (scriptIndex == 0)
+					hasSelfLoop = hasSelfLoop || getScript.hasSelfLoop;
 				lastIndex = index;
 			});
 			const length = script[scriptIndex].length;
@@ -105,21 +106,27 @@ var classes = [
 					0,
 					script[scriptIndex].length - 1
 				);
+
 			if (lastIndex + 1 < obj.length)
 				script[++scriptIndex] = `.length = ${obj.length}`;
+
+			scriptArray = script.map((scriptText, index) => {
+				if (index == 0 && !hasSelfLoop) return `[${scriptText}]`;
+				if (scriptText[0] == ".") return varName => varName + scriptText;
+				return varName => `${varName}.push(${scriptText})`;
+			});
+
 			this.ignoreProperties = ["length"];
 			obj.forEach((element, index) => {
 				this.ignoreProperties.push(index.toString());
 			});
-			return {
-				empty: "[]",
-				add: script.map((scriptText, index) => {
-					// if (index == 0) return `[${scriptText}]`;
-					if(scriptText[0]=='.')
-						return varName => varName + scriptText;
-					return varName => `${varName}.push(${scriptText})`;
-				})
-			};
+
+			if (hasSelfLoop)
+				return {
+					empty: "[]",
+					add: scriptArray
+				};
+			return scriptArray;
 		}
 	},
 	{

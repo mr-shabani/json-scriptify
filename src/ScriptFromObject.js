@@ -2,11 +2,13 @@ var { classes: classesToScript, types: typesToScript } = require("./toScript");
 var { addToPath, isInstanceOf } = require("./helper");
 class ScriptFromObject {
 	constructor(obj, objName, parent) {
+		this.getScript = this.getScript.bind(this);
 		this.circularExpressions = [];
 		this.objectConstructors = [];
 		this.parent = parent;
 		if (parent) {
 			this.mark = parent.mark;
+			this.circularDictionary = parent.circularDictionary;
 			this.tempIndex = parent.tempIndex;
 			this.objectSet = new WeakSet(
 				Array.from(this.mark)
@@ -15,6 +17,7 @@ class ScriptFromObject {
 			);
 		} else {
 			this.mark = new Map();
+			this.circularDictionary = new Map();
 			this.tempIndex = 0;
 			this.objectSet = new WeakSet();
 		}
@@ -53,17 +56,19 @@ class ScriptFromObject {
 		if (!["object", "function", "symbol"].includes(typeof obj)) return;
 
 		if (this.mark.has(obj)) {
-			this.circularExpressions.push([path, this.mark.get(obj)]);
+			let referencePath = this.mark.get(obj);
+			this.circularExpressions.push([path, referencePath]);
+			this.circularDictionary.get(referencePath).push(path);
 			return;
 		}
-
 		this.mark.set(obj, path);
+		this.circularDictionary.set(path, []);
 
 		var ignoreProperties = [];
 		for (let cls of classesToScript) {
 			if (isInstanceOf(cls.type, obj)) {
 				var index = this.objectConstructors.length;
-				var expression = cls.toScript(obj, this.getScript.bind(this), path);
+				var expression = cls.toScript(obj, this.getScript, path);
 				ignoreProperties = cls.ignoreProperties || [];
 				if (typeof expression == "string") {
 					this.objectConstructors.push([path, expression]);
@@ -181,10 +186,15 @@ class ScriptFromObject {
 		});
 	}
 
-	getScript(obj, path) {
+	getScript(obj, selfPath) {
 		let markSize = this.mark.size;
 		let tempVarName = `temp[${this.tempIndex++}]`;
 		let objScript = new ScriptFromObject(obj, tempVarName, this);
+		if (selfPath) {
+			if (this.circularDictionary.get(selfPath).length == 0)
+				this.getScript.hasSelfLoop = false;
+			else this.getScript.hasSelfLoop = true;
+		}
 		if (this.mark.size == markSize) {
 			if (objScript.objectConstructors.length == 0) {
 				if (objScript.circularExpressions.length == 0)
