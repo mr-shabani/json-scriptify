@@ -80,10 +80,6 @@ var classes = [
 	{
 		type: Array,
 		toScript: function(obj, getScript, path) {
-			this.ignoreProperties = ["length"];
-			obj.forEach((element, index) => {
-				this.ignoreProperties.push(index.toString());
-			});
 			var script = [];
 			script[0] = "";
 			var lastIndex = -1;
@@ -109,10 +105,18 @@ var classes = [
 					0,
 					script[scriptIndex].length - 1
 				);
+			if (lastIndex + 1 < obj.length)
+				script[++scriptIndex] = `.length = ${obj.length}`;
+			this.ignoreProperties = ["length"];
+			obj.forEach((element, index) => {
+				this.ignoreProperties.push(index.toString());
+			});
 			return {
 				empty: "[]",
 				add: script.map((scriptText, index) => {
 					// if (index == 0) return `[${scriptText}]`;
+					if(scriptText[0]=='.')
+						return varName => varName + scriptText;
 					return varName => `${varName}.push(${scriptText})`;
 				})
 			};

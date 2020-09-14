@@ -30,6 +30,9 @@ test("Array properties", function() {
 	obj.a.b = { x: 1, [sym]: sym };
 	expect(checkFor(obj)).toEqual(true);
 	expect(checkFor({ a: obj })).toEqual(true);
+	obj.length = 20;
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ a: obj })).toEqual(true);
 });
 
 test("function properties", function() {
