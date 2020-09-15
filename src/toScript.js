@@ -1,4 +1,4 @@
-var { objectHasOnly, isEmptyObject, addToPath } = require("./helper");
+var { objectHasOnly, isEmptyObject  } = require("./helper");
 var classes = [
 	{
 		type: Date,

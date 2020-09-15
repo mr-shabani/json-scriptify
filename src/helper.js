@@ -1,10 +1,43 @@
-var addToPath = function(path, key) {
-	const alphabetCheckRegexp = /^[A-Za-z_]+$/;
-	if (String(parseInt(key)) == key && key != "NaN")
-		return path + "[" + parseInt(key) + "]";
-	if (alphabetCheckRegexp.test(key)) return path + "." + key;
-	return path + "[" + JSON.stringify(key) + "]";
-};
+class NodePath {
+	constructor(parentNode, key, isSymbol) {
+		if (parentNode) this.parent = parentNode;
+		if (isSymbol) this.isSymbol = true;
+		this.key = key;
+	}
+	addCircularCite(nodePath) {
+		if (this.circularCitedChild) this.circularCitedChild.push(nodePath);
+		else this.circularCitedChild = [nodePath];
+	}
+	makeCircularTo(circularReference) {
+		this.isCircular = true;
+		this.circularReference = circularReference;
+		circularReference.addCircularCite(this);
+	}
+	add(key, getScript) {
+		if (typeof key == "symbol") {
+			key = getScript(key);
+			var new_child = new NodePath(this, key, true);
+		} else var new_child = new NodePath(this, key);
+
+		if (this.child) this.child.push(new_child);
+		else this.child = [new_child];
+
+		return new_child;
+	}
+	toString() {
+		if (this.parent) return this.addToPath(this.parent.toString(), this.key);
+		return this.key;
+	}
+	addToPath(pathText, keyText) {
+		if (this.isSymbol) return pathText + "[" + keyText + "]";
+		const alphabetCheckRegexp = /^[A-Za-z_]+$/;
+		if (String(parseInt(keyText)) == keyText && keyText != "NaN")
+			return pathText + "[" + parseInt(keyText) + "]";
+		if (alphabetCheckRegexp.test(keyText)) return pathText + "." + keyText;
+		return pathText + "[" + JSON.stringify(keyText) + "]";
+	}
+}
+
 var isInstanceOf = function(type, obj) {
 	if (typeof type == "string") return typeof obj == type;
 	if (obj instanceof type) return true;
@@ -29,4 +62,9 @@ var objectHasOnly = function(obj, props) {
 	return true;
 };
 
-module.exports = { addToPath, isInstanceOf, isEmptyObject, objectHasOnly };
+module.exports = {
+	isInstanceOf,
+	isEmptyObject,
+	objectHasOnly,
+	NodePath
+};

@@ -1,5 +1,5 @@
 var { classes: classesToScript, types: typesToScript } = require("./toScript");
-var { addToPath, isInstanceOf } = require("./helper");
+var { isInstanceOf, NodePath } = require("./helper");
 class ScriptFromObject {
 	constructor(obj, objName, parent) {
 		this.getScript = this.getScript.bind(this);
@@ -8,7 +8,6 @@ class ScriptFromObject {
 		this.parent = parent;
 		if (parent) {
 			this.mark = parent.mark;
-			this.circularDictionary = parent.circularDictionary;
 			this.tempIndex = parent.tempIndex;
 			this.objectSet = new WeakSet(
 				Array.from(this.mark)
@@ -17,15 +16,16 @@ class ScriptFromObject {
 			);
 		} else {
 			this.mark = new Map();
-			this.circularDictionary = new Map();
 			this.tempIndex = 0;
 			this.objectSet = new WeakSet();
 		}
 		this.objName = objName || "obj";
+		// this.path = parent ? parent.path.add(this.objName) : new NodePath(null, this.objName);
+		this.path = new NodePath(null, this.objName);
 
 		this.stringified = JSON.stringify(obj, this.JsonReplacer.bind(this));
 
-		this.traverse(obj, this.objName);
+		this.makeExpressions(obj, this.path);
 	}
 
 	JsonReplacer(key, value) {
@@ -44,7 +44,7 @@ class ScriptFromObject {
 		return value;
 	}
 
-	traverse(obj, path) {
+	makeExpressions(obj, path) {
 		for (let type of typesToScript) {
 			if (type.isTypeOf(obj)) {
 				const replacement = type.toScript(obj);
@@ -58,11 +58,10 @@ class ScriptFromObject {
 		if (this.mark.has(obj)) {
 			let referencePath = this.mark.get(obj);
 			this.circularExpressions.push([path, referencePath]);
-			this.circularDictionary.get(referencePath).push(path);
+			path.makeCircularTo(referencePath);
 			return;
 		}
 		this.mark.set(obj, path);
-		this.circularDictionary.set(path, []);
 
 		var ignoreProperties = [];
 		for (let cls of classesToScript) {
@@ -139,12 +138,9 @@ class ScriptFromObject {
 				if (propertiesWithDescriptionOf["true true true"].length < 3) {
 					propertiesWithDescriptionOf["true true true"].forEach(
 						([key, value]) => {
-							const pathScript =
-								typeof key == "symbol"
-									? path + "[" + this.getScript(key) + "]"
-									: addToPath(path, key);
+							const newPath = path.add(key, this.getScript);
 							const valueScript = this.getScript(value);
-							this.objectConstructors.push([pathScript, valueScript]);
+							this.objectConstructors.push([newPath, valueScript]);
 						}
 					);
 				} else {
@@ -191,9 +187,8 @@ class ScriptFromObject {
 		let tempVarName = `temp[${this.tempIndex++}]`;
 		let objScript = new ScriptFromObject(obj, tempVarName, this);
 		if (selfPath) {
-			if (this.circularDictionary.get(selfPath).length == 0)
-				this.getScript.hasSelfLoop = false;
-			else this.getScript.hasSelfLoop = true;
+			if (selfPath.circularCitedChild) this.getScript.hasSelfLoop = true;
+			else this.getScript.hasSelfLoop = false;
 		}
 		if (this.mark.size == markSize) {
 			if (objScript.objectConstructors.length == 0) {
@@ -203,15 +198,6 @@ class ScriptFromObject {
 					return objScript.circularExpressions[0][1];
 			}
 		}
-		// if (path) {
-		// 	if (objScript.circularExpressions.length == 0)
-		// 		if (objScript.objectConstructors.length == 1)
-		// 			return objScript.objectConstructors[0][1];
-		// 	if (objScript.objectConstructors.length == 0) {
-		// 		if (objScript.circularExpressions.length == 0)
-		// 			return objScript.stringified;
-		// 	}
-		// }
 		if (objScript.stringified != undefined)
 			this.objectConstructors.push([tempVarName, objScript.stringified]);
 		this.objectConstructors.push(...objScript.objectConstructors);
