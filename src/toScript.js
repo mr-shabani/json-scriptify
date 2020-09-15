@@ -1,5 +1,45 @@
-var { objectHasOnly, isEmptyObject  } = require("./helper");
+var { objectHasOnly, isEmptyObject } = require("./helper");
 var classes = [
+	{
+		type: "symbol",
+		toScript: function(obj) {
+			let symbolDescription = String(obj).slice(7, -1);
+			return `Symbol("${symbolDescription}")`;
+		}
+	},
+	{
+		type: Number,
+		toScript: function(obj, getScript) {
+			return `new Number(${JSON.stringify(obj)})`;
+		}
+	},
+	{
+		type: BigInt,
+		toScript: function(obj, getScript) {
+			return `Object(BigInt(${obj.valueOf().toString()}))`;
+		}
+	},
+	{
+		type: Boolean,
+		toScript: function(obj, getScript) {
+			return `new Boolean(${JSON.stringify(obj)})`;
+		}
+	},
+	{
+		type: String,
+		toScript: function(obj, getScript) {
+			this.ignoreProperties = ["length"];
+			for (let i = 0; i < obj.length; ++i)
+				if (obj.hasOwnProperty(i)) this.ignoreProperties.push(i.toString());
+			return `new String(${JSON.stringify(obj)})`;
+		}
+	},
+	{
+		type: Symbol,
+		toScript: function(obj, getScript) {
+			return `Object(${getScript(obj.valueOf())})`;
+		}
+	},
 	{
 		type: Date,
 		toScript: function(obj) {
@@ -39,18 +79,6 @@ var classes = [
 		}
 	},
 	{
-		type: WeakSet,
-		toScript: function(obj, getScript) {
-			throw new TypeError("WeakSet cannot be scriptify!");
-		}
-	},
-	{
-		type: WeakMap,
-		toScript: function(obj, getScript) {
-			throw new TypeError("WeakMap cannot be scriptify!");
-		}
-	},
-	{
 		type: Function,
 		toScript: function(obj, getScript) {
 			eval(`
@@ -80,40 +108,26 @@ var classes = [
 	{
 		type: Array,
 		toScript: function(obj, getScript, path) {
-			var hasSelfLoop = false;
-			var script = [""];
+			var script = [[]];
 			var lastIndex = -1;
 			var scriptIndex = 0;
 			obj.forEach((element, index) => {
 				if (lastIndex != index - 1) {
-					const length = script[scriptIndex].length;
-					if (script[scriptIndex][length - 1] == ",")
-						script[scriptIndex] = script[scriptIndex].substr(
-							0,
-							script[scriptIndex].length - 1
-						);
 					script[++scriptIndex] = `.length = ${index}`;
-					script[++scriptIndex] = "";
+					script[++scriptIndex] = [];
 				}
-				script[scriptIndex] += getScript(element, path) + ",";
-				if (scriptIndex == 0)
-					hasSelfLoop = hasSelfLoop || getScript.hasSelfLoop;
+				script[scriptIndex].push(getScript(element, path));
 				lastIndex = index;
 			});
-			const length = script[scriptIndex].length;
-			if (script[scriptIndex][length - 1] == ",")
-				script[scriptIndex] = script[scriptIndex].substr(
-					0,
-					script[scriptIndex].length - 1
-				);
 
 			if (lastIndex + 1 < obj.length)
 				script[++scriptIndex] = `.length = ${obj.length}`;
 
-			scriptArray = script.map((scriptText, index) => {
-				if (index == 0 && !hasSelfLoop) return `[${scriptText}]`;
+			var hasNotSelfLoop = path.circularCitedChild ? false : true;
+			var scriptArray = script.map((scriptText, index) => {
+				if (index == 0 && hasNotSelfLoop) return `[${scriptText}]`;
 				if (scriptText[0] == ".") return varName => varName + scriptText;
-				return varName => `${varName}.push(${scriptText})`;
+				return varName => `${varName}.push(${scriptText.join(",")})`;
 			});
 
 			this.ignoreProperties = ["length"];
@@ -121,52 +135,23 @@ var classes = [
 				this.ignoreProperties.push(index.toString());
 			});
 
-			if (hasSelfLoop)
-				return {
-					empty: "[]",
-					add: scriptArray
-				};
-			return scriptArray;
+			if (hasNotSelfLoop) return scriptArray;
+			return {
+				empty: "[]",
+				add: scriptArray
+			};
 		}
 	},
 	{
-		type: String,
+		type: WeakSet,
 		toScript: function(obj, getScript) {
-			this.ignoreProperties = ["length"];
-			for (let i = 0; i < obj.length; ++i)
-				if (obj.hasOwnProperty(i)) this.ignoreProperties.push(i.toString());
-			return `new String(${JSON.stringify(obj)})`;
+			throw new TypeError("WeakSet cannot be scriptify!");
 		}
 	},
 	{
-		type: Number,
+		type: WeakMap,
 		toScript: function(obj, getScript) {
-			return `new Number(${JSON.stringify(obj)})`;
-		}
-	},
-	{
-		type: BigInt,
-		toScript: function(obj, getScript) {
-			return `Object(BigInt(${obj.valueOf().toString()}))`;
-		}
-	},
-	{
-		type: Boolean,
-		toScript: function(obj, getScript) {
-			return `new Boolean(${JSON.stringify(obj)})`;
-		}
-	},
-	{
-		type: "symbol",
-		toScript: function(obj) {
-			let symbolDescription = String(obj).slice(7, -1);
-			return `Symbol("${symbolDescription}")`;
-		}
-	},
-	{
-		type: Symbol,
-		toScript: function(obj, getScript) {
-			return `Object(${getScript(obj.valueOf())})`;
+			throw new TypeError("WeakMap cannot be scriptify!");
 		}
 	}
 ];
