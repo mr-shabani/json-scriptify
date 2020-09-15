@@ -9,25 +9,25 @@ var classes = [
 	},
 	{
 		type: Number,
-		toScript: function(obj, getScript) {
+		toScript: function(obj) {
 			return `new Number(${JSON.stringify(obj)})`;
 		}
 	},
 	{
 		type: BigInt,
-		toScript: function(obj, getScript) {
+		toScript: function(obj) {
 			return `Object(BigInt(${obj.valueOf().toString()}))`;
 		}
 	},
 	{
 		type: Boolean,
-		toScript: function(obj, getScript) {
+		toScript: function(obj) {
 			return `new Boolean(${JSON.stringify(obj)})`;
 		}
 	},
 	{
 		type: String,
-		toScript: function(obj, getScript) {
+		toScript: function(obj) {
 			this.ignoreProperties = ["length"];
 			for (let i = 0; i < obj.length; ++i)
 				if (obj.hasOwnProperty(i)) this.ignoreProperties.push(i.toString());
@@ -37,7 +37,8 @@ var classes = [
 	{
 		type: Symbol,
 		toScript: function(obj, getScript) {
-			return `Object(${getScript(obj.valueOf())})`;
+			let symbolVariable =getScript(obj.valueOf()); 
+			return (varName) => `${varName}=Object(${symbolVariable})`;
 		}
 	},
 	{
@@ -80,7 +81,7 @@ var classes = [
 	},
 	{
 		type: Function,
-		toScript: function(obj, getScript) {
+		toScript: function(obj) {
 			eval(`
 			var PleaseDoNotUseThisNameThatReservedForScriptifyModule = ${obj.toString()}
 			`);
@@ -125,7 +126,7 @@ var classes = [
 
 			var hasNotSelfLoop = path.circularCitedChild ? false : true;
 			var scriptArray = script.map((scriptText, index) => {
-				if (index == 0 && hasNotSelfLoop) return `[${scriptText}]`;
+				if (index == 0 && hasNotSelfLoop) return `[${scriptText.join(",")}]`;
 				if (scriptText[0] == ".") return varName => varName + scriptText;
 				return varName => `${varName}.push(${scriptText.join(",")})`;
 			});

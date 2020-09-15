@@ -69,34 +69,18 @@ class ScriptFromObject {
 				var index = this.objectConstructors.length;
 				var expression = cls.toScript(obj, this.getScript, path);
 				ignoreProperties = cls.ignoreProperties || [];
-				if (typeof expression == "string") {
-					this.objectConstructors.push([path, expression]);
-				}
-				if (typeof expression == "function") {
-					this.objectConstructors.push([expression(path)]);
-				}
-				if (expression instanceof Array) {
-					expression.forEach(expr => {
-						if (typeof expr == "string") {
-							this.objectConstructors.push([path, expr]);
-						}
-						if (typeof expr == "function") {
-							this.objectConstructors.push([expr(path)]);
-						}
-					});
-				} else if (typeof expression == "object") {
-					this.objectConstructors.splice(index, 0, [path, expression.empty]);
-					if (expression.add instanceof Array == false)
-						expression.add = [expression.add];
-					expression.add.forEach(expr => {
-						if (typeof expr == "string") {
-							this.objectConstructors.push([path, expr]);
-						}
-						if (typeof expr == "function") {
-							this.objectConstructors.push([expr(path)]);
-						}
-					});
-				}
+				if (expression instanceof Array == false) expression = [expression];
+				expression.forEach(expr => {
+					if (typeof expr == "object") {
+						this.objectConstructors.splice(index, 0, [path, expr.empty]);
+						if (expr.add instanceof Array == false) expr.add = [expr.add];
+						expr.add.forEach(addExpr => {
+							this.objectConstructors.push([path, addExpr]);
+						});
+					}
+					this.objectConstructors.push([path, expr]);
+				});
+				break;
 			}
 		}
 
@@ -228,8 +212,11 @@ class ScriptFromObject {
 		}
 
 		// str += "//Object constructors\n";
-		this.objectConstructors.forEach(([path, code]) => {
-			if (code) str += `${path} = ${code};\n`;
+		this.objectConstructors.forEach(([path, expression]) => {
+			if (typeof expression == "string") str += `${path} = ${expression};\n`;
+			else if (typeof expression == "function") str += `${expression(path)};\n`;
+			else if (expression instanceof NodePath)
+				str += `${path} = ${expression};\n`;
 			else str += `${path};\n`;
 		});
 
