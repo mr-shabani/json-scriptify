@@ -1,4 +1,4 @@
-var { objectHasOnly, isEmptyObject } = require("./helper");
+var { objectHasOnly, isEmptyObject, cleanKey } = require("./helper");
 var classes = [
 	{
 		type: "symbol",
@@ -37,8 +37,8 @@ var classes = [
 	{
 		type: Symbol,
 		toScript: function(obj, getScript) {
-			let symbolVariable =getScript(obj.valueOf()); 
-			return (varName) => `${varName}=Object(${symbolVariable})`;
+			let symbolVariable = getScript(obj.valueOf());
+			return varName => `${varName}=Object(${symbolVariable})`;
 		}
 	},
 	{
@@ -154,6 +154,33 @@ var classes = [
 		toScript: function(obj, getScript) {
 			throw new TypeError("WeakMap cannot be scriptify!");
 		}
+	},
+	{  // This item always must be at the end of the list
+		type: "object", 
+		toScript: function(obj, getScript, path) {
+			var entries = Object.entries(obj).filter(([key, value]) => {
+				var descriptor = Object.getOwnPropertyDescriptor(obj, key);
+				return descriptor.configurable && descriptor.writable;
+			});
+			var script = entries.map(([key, value]) => [key, getScript(value, path)]);
+
+			var hasNotSelfLoop = path.circularCitedChild ? false : true;
+
+			this.ignoreProperties = entries.map(([key, value]) => key);
+
+			if (hasNotSelfLoop)
+				return varName =>
+					`${varName}={${script
+						.map(([key, val]) => cleanKey(key) + ":" + val)
+						.join(",")}}`;
+			return {
+				empty: "{}",
+				add: varName =>
+					`[${script
+						.map(([key, val]) => "[" + JSON.stringify(key) + "," + val + "]")
+						.join(",")}].forEach(([k,v])=>{${varName}[k]=v;})`
+			};
+		}
 	}
 ];
 
@@ -192,6 +219,24 @@ var types = [
 		isTypeOf: obj => Object.is(obj, -Infinity),
 		toScript: function(obj) {
 			return "-Infinity";
+		}
+	},
+	{
+		isTypeOf: obj => typeof obj == "string",
+		toScript: function(obj) {
+			return JSON.stringify(obj);
+		}
+	},
+	{
+		isTypeOf: obj => typeof obj == "boolean",
+		toScript: function(obj) {
+			return obj.toString();
+		}
+	},
+	{
+		isTypeOf: obj => typeof obj == "number",
+		toScript: function(obj) {
+			return obj.toString();
 		}
 	}
 ];

@@ -38,6 +38,14 @@ class NodePath {
 	}
 }
 
+var cleanKey = function(keyText) {
+	if (String(parseInt(keyText)) == keyText && keyText != "NaN")
+		return parseInt(keyText);
+	const alphabetCheckRegexp = /^[A-Za-z_]+$/;
+	if (alphabetCheckRegexp.test(keyText)) return keyText;
+	return JSON.stringify(keyText);
+};
+
 var isInstanceOf = function(type, obj) {
 	if (typeof type == "string") return typeof obj == type;
 	if (obj instanceof type) return true;
@@ -66,5 +74,6 @@ module.exports = {
 	isInstanceOf,
 	isEmptyObject,
 	objectHasOnly,
-	NodePath
+	NodePath,
+	cleanKey
 };

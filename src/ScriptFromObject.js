@@ -20,28 +20,9 @@ class ScriptFromObject {
 			this.objectSet = new WeakSet();
 		}
 		this.objName = objName || "obj";
-		// this.path = parent ? parent.path.add(this.objName) : new NodePath(null, this.objName);
 		this.path = new NodePath(null, this.objName);
 
-		this.stringified = JSON.stringify(obj, this.JsonReplacer.bind(this));
-
 		this.makeExpressions(obj, this.path);
-	}
-
-	JsonReplacer(key, value) {
-		for (let type of typesToScript) {
-			if (type.isTypeOf(value)) return;
-		}
-		if (typeof value == "object") {
-			if (this.objectSet.has(value)) {
-				return;
-			}
-			this.objectSet.add(value);
-		}
-		for (let cls of classesToScript) {
-			if (typeof cls.type == "function" && value instanceof cls.type) return;
-		}
-		return value;
 	}
 
 	makeExpressions(obj, path) {
@@ -57,8 +38,8 @@ class ScriptFromObject {
 
 		if (this.mark.has(obj)) {
 			let referencePath = this.mark.get(obj);
-			this.circularExpressions.push([path, referencePath]);
 			path.makeCircularTo(referencePath);
+			this.circularExpressions.push([path, referencePath]);
 			return;
 		}
 		this.mark.set(obj, path);
@@ -77,8 +58,7 @@ class ScriptFromObject {
 						expr.add.forEach(addExpr => {
 							this.objectConstructors.push([path, addExpr]);
 						});
-					}
-					this.objectConstructors.push([path, expr]);
+					} else this.objectConstructors.push([path, expr]);
 				});
 				break;
 			}
@@ -93,6 +73,8 @@ class ScriptFromObject {
 		);
 
 		var propertiesWithDescriptionOf = {};
+
+		const descriptionList = ["enumerable", "writable", "configurable"];
 
 		allPropertyKeys.forEach(key => {
 			if (ignoreProperties.includes(key)) return;
@@ -112,8 +94,6 @@ class ScriptFromObject {
 				];
 			}
 		});
-
-		const descriptionList = ["enumerable", "writable", "configurable"];
 
 		var allExistDescriptionsText = Object.keys(propertiesWithDescriptionOf);
 
@@ -166,24 +146,20 @@ class ScriptFromObject {
 		});
 	}
 
-	getScript(obj, selfPath) {
+	getScript(obj) {
 		let markSize = this.mark.size;
 		let tempVarName = `temp[${this.tempIndex++}]`;
 		let objScript = new ScriptFromObject(obj, tempVarName, this);
-		if (selfPath) {
-			if (selfPath.circularCitedChild) this.getScript.hasSelfLoop = true;
-			else this.getScript.hasSelfLoop = false;
-		}
 		if (this.mark.size == markSize) {
 			if (objScript.objectConstructors.length == 0) {
-				if (objScript.circularExpressions.length == 0)
-					return objScript.stringified;
 				if (objScript.circularExpressions.length == 1)
 					return objScript.circularExpressions[0][1];
 			}
+			if (objScript.circularExpressions.length == 0) {
+				if (objScript.objectConstructors.length == 1)
+					return objScript.objectConstructors[0][1];
+			}
 		}
-		if (objScript.stringified != undefined)
-			this.objectConstructors.push([tempVarName, objScript.stringified]);
 		this.objectConstructors.push(...objScript.objectConstructors);
 		this.objectConstructors.push(...objScript.circularExpressions);
 		this.tempIndex = objScript.tempIndex;
@@ -202,27 +178,22 @@ class ScriptFromObject {
 		options = options || {};
 
 		var str = "";
-		if (this.parent) {
-			if (this.stringified != undefined)
-				str += `${this.objName} = ` + this.stringified + ";\n";
-		} else {
-			str += ` var temp=[];\n var ${this.objName}`;
-			if (this.stringified != undefined) str += "=" + this.stringified;
-			str += ";\n";
+		if (!this.parent) {
+			str += ` var temp=[];\n var ${this.objName};`;
 		}
 
 		// str += "//Object constructors\n";
 		this.objectConstructors.forEach(([path, expression]) => {
-			if (typeof expression == "string") str += `${path} = ${expression};\n`;
-			else if (typeof expression == "function") str += `${expression(path)};\n`;
+			if (typeof expression == "string") str += `\n${path} = ${expression};`;
+			else if (typeof expression == "function") str += `\n${expression(path)};`;
 			else if (expression instanceof NodePath)
-				str += `${path} = ${expression};\n`;
-			else str += `${path};\n`;
+				str += `\n${path} = ${expression};`;
+			else str += `\n${path};`;
 		});
 
 		// str += "//Circular references\n";
 		this.circularExpressions.forEach(([path, reference]) => {
-			str += `${path} = ${reference};\n`;
+			str += `\n${path} = ${reference};`;
 		});
 
 		return str;
