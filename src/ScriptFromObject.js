@@ -1,26 +1,25 @@
 var { classes: classesToScript, types: typesToScript } = require("./toScript");
 var { isInstanceOf, NodePath } = require("./helper");
 class ScriptFromObject {
-	constructor(obj, objName, parent) {
+	constructor(obj, parent) {
 		this.getScript = this.getScript.bind(this);
 		this.circularExpressions = [];
 		this.objectConstructors = [];
 		this.parent = parent;
 		if (parent) {
 			this.mark = parent.mark;
-			this.tempIndex = parent.tempIndex;
 			this.objectSet = new WeakSet(
 				Array.from(this.mark)
 					.map(([object, path]) => object)
 					.filter(object => typeof object == "object")
 			);
+			this.path = new NodePath();
 		} else {
 			this.mark = new Map();
-			this.tempIndex = 0;
 			this.objectSet = new WeakSet();
+			this.path = new NodePath(null, "obj");
+			this.path.resetNameGenerator();
 		}
-		this.objName = objName || "obj";
-		this.path = new NodePath(null, this.objName);
 
 		this.makeExpressions(obj, this.path);
 	}
@@ -148,8 +147,7 @@ class ScriptFromObject {
 
 	getScript(obj) {
 		let markSize = this.mark.size;
-		let tempVarName = `temp[${this.tempIndex++}]`;
-		let objScript = new ScriptFromObject(obj, tempVarName, this);
+		let objScript = new ScriptFromObject(obj, this);
 		if (this.mark.size == markSize) {
 			if (objScript.objectConstructors.length == 0) {
 				if (objScript.circularExpressions.length == 1)
@@ -162,15 +160,14 @@ class ScriptFromObject {
 		}
 		this.objectConstructors.push(...objScript.objectConstructors);
 		this.objectConstructors.push(...objScript.circularExpressions);
-		this.tempIndex = objScript.tempIndex;
-		return tempVarName;
+		return objScript.path;
 	}
 
 	exportAsFunctionCall(options) {
 		var str = "(function(){//version 1\n";
 		str += this.getRawScript(options);
 		if (this.parent) str += `\n })()`;
-		else str += `\n return ${this.objName};\n})()`;
+		else str += `\n return ${this.path};\n})()`;
 		return str;
 	}
 
@@ -179,21 +176,21 @@ class ScriptFromObject {
 
 		var str = "";
 		if (!this.parent) {
-			str += ` var temp=[];\n var ${this.objName};`;
+			str += ` const _={};\n var ${this.path};`;
 		}
 
 		// str += "//Object constructors\n";
 		this.objectConstructors.forEach(([path, expression]) => {
-			if (typeof expression == "string") str += `\n${path} = ${expression};`;
-			else if (typeof expression == "function") str += `\n${expression(path)};`;
+			if (typeof expression == "string") str += `\n ${path} = ${expression};`;
+			else if (typeof expression == "function") str += `\n ${expression(path)};`;
 			else if (expression instanceof NodePath)
-				str += `\n${path} = ${expression};`;
-			else str += `\n${path};`;
+				str += `\n ${path} = ${expression};`;
+			else str += `\n ${path};`;
 		});
 
 		// str += "//Circular references\n";
 		this.circularExpressions.forEach(([path, reference]) => {
-			str += `\n${path} = ${reference};`;
+			str += `\n ${path} = ${reference};`;
 		});
 
 		return str;

@@ -1,8 +1,37 @@
+var VariableNameGenerator = function*() {
+	let varName = ["a"];
+	var charCode;
+	var plusPlus = function() {
+		let length = varName.length;
+		var addition = true;
+		for (let i = 0; i < length; ++i) {
+			if (!addition) break;
+			if (varName[i] == "Z") {
+				varName[i] = "a";
+			} else {
+				if (varName[i] == "z") varName[i] = "A";
+				else {
+					charCode = varName[i].charCodeAt(0);
+					varName[i] = String.fromCharCode(charCode + 1);
+				}
+				addition = false;
+			}
+		}
+		if (addition) varName.push("a");
+	};
+	while (true) {
+		yield "_." + varName.join("");
+		plusPlus();
+	}
+};
+
+var varNameGen = VariableNameGenerator();
+
 class NodePath {
 	constructor(parentNode, key, isSymbol) {
 		if (parentNode) this.parent = parentNode;
 		if (isSymbol) this.isSymbol = true;
-		this.key = key;
+		if (key) this.key = key;
 	}
 	addCircularCite(nodePath) {
 		if (this.circularCitedChild) this.circularCitedChild.push(nodePath);
@@ -26,6 +55,8 @@ class NodePath {
 	}
 	toString() {
 		if (this.parent) return this.addToPath(this.parent.toString(), this.key);
+		if (this.key) return this.key;
+		this.key = this.newName();
 		return this.key;
 	}
 	addToPath(pathText, keyText) {
@@ -35,6 +66,13 @@ class NodePath {
 			return pathText + "[" + parseInt(keyText) + "]";
 		if (alphabetCheckRegexp.test(keyText)) return pathText + "." + keyText;
 		return pathText + "[" + JSON.stringify(keyText) + "]";
+	}
+
+	newName() {
+		return varNameGen.next().value;
+	}
+	resetNameGenerator(){
+		varNameGen = VariableNameGenerator();
 	}
 }
 
