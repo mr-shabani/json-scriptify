@@ -1,4 +1,4 @@
-var { objectHasOnly, isEmptyObject, cleanKey } = require("./helper");
+var { objectHasOnly, getSameProperties, cleanKey } = require("./helper");
 var classes = [
 	{
 		type: "symbol",
@@ -50,6 +50,7 @@ var classes = [
 	{
 		type: RegExp,
 		toScript: function(obj) {
+			this.ignoreProperties = getSameProperties(obj, obj.toString());
 			return obj.toString();
 		}
 	},
@@ -82,26 +83,8 @@ var classes = [
 	{
 		type: Function,
 		toScript: function(obj) {
-			eval(`
-			var PleaseDoNotUseThisNameThatReservedForScriptifyModule = ${obj.toString()}
-			`);
-			const f = PleaseDoNotUseThisNameThatReservedForScriptifyModule;
-			this.ignoreProperties = Object.getOwnPropertyNames(f).filter(key => {
-				if (!(isEmptyObject(obj[key]) && isEmptyObject(f[key]))) {
-					if (obj[key] !== f[key] && !Object.is(f[key], obj[key])) return false;
-				}
-				let descriptor_f = Object.getOwnPropertyDescriptor(f, key);
-				let descriptor_obj = Object.getOwnPropertyDescriptor(obj, key);
-				return (
-					descriptor_f.writable == descriptor_obj.writable &&
-					descriptor_f.configurable == descriptor_obj.configurable &&
-					descriptor_f.enumerable == descriptor_obj.enumerable
-				);
-			});
-			if (
-				objectHasOnly(obj.prototype, { constructor: obj }) &&
-				objectHasOnly(f.prototype, { constructor: f })
-			)
+			this.ignoreProperties = getSameProperties(obj, obj.toString());
+			if (objectHasOnly(obj.prototype, { constructor: obj }))
 				this.ignoreProperties.push("prototype");
 			return obj.toString();
 		}
@@ -132,7 +115,6 @@ var classes = [
 				script[scriptIndex].push(getScript(element, path));
 				lastIndex = index;
 			});
-
 			if (lastIndex + 1 < obj.length)
 				script[++scriptIndex] = `.length = ${obj.length}`;
 

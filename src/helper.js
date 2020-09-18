@@ -67,11 +67,10 @@ class NodePath {
 		if (alphabetCheckRegexp.test(keyText)) return pathText + "." + keyText;
 		return pathText + "[" + JSON.stringify(keyText) + "]";
 	}
-
 	newName() {
 		return varNameGen.next().value;
 	}
-	resetNameGenerator(){
+	resetNameGenerator() {
 		varNameGen = VariableNameGenerator();
 	}
 }
@@ -108,9 +107,36 @@ var objectHasOnly = function(obj, props) {
 	return true;
 };
 
+var getSameProperties = function(obj, script) {
+	eval(`
+			var PleaseDoNotUseThisNameThatReservedForScriptifyModule = ${script}
+			`);
+	const evaluated_obj = PleaseDoNotUseThisNameThatReservedForScriptifyModule;
+	var sameProperties = Object.getOwnPropertyNames(evaluated_obj).filter(key => {
+		if (!(isEmptyObject(obj[key]) && isEmptyObject(evaluated_obj[key]))) {
+			if (
+				obj[key] !== evaluated_obj[key] &&
+				!Object.is(evaluated_obj[key], obj[key])
+			)
+				return false;
+		}
+		let descriptor_evalObj = Object.getOwnPropertyDescriptor(
+			evaluated_obj,
+			key
+		);
+		let descriptor_obj = Object.getOwnPropertyDescriptor(obj, key);
+		return (
+			descriptor_evalObj.writable == descriptor_obj.writable &&
+			descriptor_evalObj.configurable == descriptor_obj.configurable &&
+			descriptor_evalObj.enumerable == descriptor_obj.enumerable
+		);
+	});
+	return sameProperties;
+};
+
 module.exports = {
 	isInstanceOf,
-	isEmptyObject,
+	getSameProperties,
 	objectHasOnly,
 	NodePath,
 	cleanKey
