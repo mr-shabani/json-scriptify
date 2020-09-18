@@ -36,9 +36,9 @@ var classes = [
 	},
 	{
 		type: Symbol,
-		toScript: function(obj, getScript) {
+		toScript: function(obj, getScript,path) {
 			let symbolVariable = getScript(obj.valueOf());
-			return varName => `${varName}=Object(${symbolVariable})`;
+			return [[path,"=Object(", symbolVariable, ")"]];
 		}
 	},
 	{
@@ -55,27 +55,27 @@ var classes = [
 	},
 	{
 		type: Map,
-		toScript: function(obj, getScript) {
+		toScript: function(obj, getScript, path) {
 			let mapContentArray = Array.from(obj);
 			if (mapContentArray.length == 0) return "new Map()";
 			let mapContentArrayScript = getScript(mapContentArray);
 			return {
 				empty: "new Map()",
-				add: varName =>
-					`${mapContentArrayScript}.forEach(([k,v])=>{${varName}.set(k,v);})`
+				add: [
+					[mapContentArrayScript, ".forEach(([k,v])=>{", path, ".set(k,v);})"]
+				]
 			};
 		}
 	},
 	{
 		type: Set,
-		toScript: function(obj, getScript) {
+		toScript: function(obj, getScript, path) {
 			let setContentArray = Array.from(obj);
 			if (setContentArray.length == 0) return "new Set()";
 			let setContentArrayScript = getScript(setContentArray);
 			return {
 				empty: "new Set()",
-				add: varName =>
-					`${setContentArrayScript}.forEach((v)=>{${varName}.add(v);})`
+				add: [[setContentArrayScript, ".forEach((v)=>{", path, ".add(v);})"]]
 			};
 		}
 	},
@@ -107,6 +107,18 @@ var classes = [
 		}
 	},
 	{
+		type: WeakSet,
+		toScript: function(obj, getScript) {
+			throw new TypeError("WeakSet cannot be scriptify!");
+		}
+	},
+	{
+		type: WeakMap,
+		toScript: function(obj, getScript) {
+			throw new TypeError("WeakMap cannot be scriptify!");
+		}
+	},
+	{
 		type: Array,
 		toScript: function(obj, getScript, path) {
 			var script = [[]];
@@ -126,9 +138,14 @@ var classes = [
 
 			var hasNotSelfLoop = path.circularCitedChild ? false : true;
 			var scriptArray = script.map((scriptText, index) => {
-				if (index == 0 && hasNotSelfLoop) return `[${scriptText.join(",")}]`;
-				if (scriptText[0] == ".") return varName => varName + scriptText;
-				return varName => `${varName}.push(${scriptText.join(",")})`;
+				if (index == 0 && hasNotSelfLoop) return [path,'=[',scriptText.join(","),']'];
+				if (scriptText[0] == ".") return [path, scriptText];
+				let expression = [];
+				scriptText.forEach(x => {
+					expression.push(x, ",");
+				});
+				expression.pop();
+				return [path, ".push(", ...expression, ")"];
 			});
 
 			this.ignoreProperties = ["length"];
@@ -144,19 +161,8 @@ var classes = [
 		}
 	},
 	{
-		type: WeakSet,
-		toScript: function(obj, getScript) {
-			throw new TypeError("WeakSet cannot be scriptify!");
-		}
-	},
-	{
-		type: WeakMap,
-		toScript: function(obj, getScript) {
-			throw new TypeError("WeakMap cannot be scriptify!");
-		}
-	},
-	{  // This item always must be at the end of the list
-		type: "object", 
+		// This item always must be at the end of the list
+		type: "object",
 		toScript: function(obj, getScript, path) {
 			var entries = Object.entries(obj).filter(([key, value]) => {
 				var descriptor = Object.getOwnPropertyDescriptor(obj, key);
@@ -168,17 +174,22 @@ var classes = [
 
 			this.ignoreProperties = entries.map(([key, value]) => key);
 
-			if (hasNotSelfLoop)
-				return varName =>
-					`${varName}={${script
-						.map(([key, val]) => cleanKey(key) + ":" + val)
-						.join(",")}}`;
+			let expression = [];
+
+			if (hasNotSelfLoop) {
+				script.forEach(([key, val]) => {
+					expression.push(cleanKey(key), ":", val, ",");
+				});
+				expression.pop();
+				return [[path, "={", ...expression, "}"]];
+			}
+			script.forEach(([key, val]) => {
+				expression.push("[", JSON.stringify(key), ",", val, "]", ",");
+			});
+			expression.pop();
 			return {
 				empty: "{}",
-				add: varName =>
-					`[${script
-						.map(([key, val]) => "[" + JSON.stringify(key) + "," + val + "]")
-						.join(",")}].forEach(([k,v])=>{${varName}[k]=v;})`
+				add: [["[", ...expression, "].forEach(([k,v])=>{", path, "[k]=v;})"]]
 			};
 		}
 	}
