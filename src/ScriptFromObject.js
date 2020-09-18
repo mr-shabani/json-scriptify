@@ -14,14 +14,14 @@ class ScriptFromObject {
 			this.path.resetNameGenerator();
 		}
 
-		this.makeExpressions(obj, this.path);
+		this.makeExpressions(obj);
 	}
 
-	makeExpressions(obj, path) {
+	makeExpressions(obj) {
 		for (let type of typesToScript) {
 			if (type.isTypeOf(obj)) {
 				const replacement = type.toScript(obj);
-				this.expressions.push([path, "=", replacement]);
+				this.expressions.push([this.path, "=", replacement]);
 				return;
 			}
 		}
@@ -30,26 +30,26 @@ class ScriptFromObject {
 
 		if (this.mark.has(obj)) {
 			let referencePath = this.mark.get(obj);
-			path.makeCircularTo(referencePath);
-			this.expressions.push([path, "=", referencePath]);
+			this.path.makeCircularTo(referencePath);
+			this.expressions.push([this.path, "=", referencePath]);
 			return;
 		}
-		this.mark.set(obj, path);
+		this.mark.set(obj, this.path);
 
 		var ignoreProperties = [];
 		for (let cls of classesToScript) {
 			if (isInstanceOf(cls.type, obj)) {
 				var index = this.expressions.length;
-				var expression = cls.toScript(obj, this.getScript, path);
+				var expression = cls.toScript(obj, this.getScript, this.path);
 				ignoreProperties = cls.ignoreProperties || [];
 				if (expression instanceof Array == false) expression = [expression];
 				expression.forEach(expr => {
 					if (typeof expr == "string") {
-						this.expressions.push([path, "=", ...expr]);
+						this.expressions.push([this.path, "=", ...expr]);
 					} else if (expr instanceof Array) {
 						this.expressions.push(expr);
 					} else if (typeof expr == "object") {
-						this.expressions.splice(index, 0, [path, "=", expr.empty]);
+						this.expressions.splice(index, 0, [this.path, "=", expr.empty]);
 						if (expr.add instanceof Array == false) expr.add = [expr.add];
 						expr.add.forEach(addExpr => {
 							this.expressions.push(addExpr);
@@ -60,10 +60,10 @@ class ScriptFromObject {
 			}
 		}
 
-		this.makeScriptFromObjectProperties(obj, path, ignoreProperties);
+		this.makeScriptFromObjectProperties(obj, ignoreProperties);
 	}
 
-	makeScriptFromObjectProperties(obj, path, ignoreProperties) {
+	makeScriptFromObjectProperties(obj, ignoreProperties) {
 		var allPropertyKeys = Object.getOwnPropertyNames(obj).concat(
 			Object.getOwnPropertySymbols(obj)
 		);
@@ -98,7 +98,7 @@ class ScriptFromObject {
 				if (propertiesWithDescriptionOf["true true true"].length < 3) {
 					propertiesWithDescriptionOf["true true true"].forEach(
 						([key, value]) => {
-							const newPath = path.add(key, this.getScript);
+							const newPath = this.path.add(key, this.getScript);
 							this.expressions.push([newPath, "=", this.getScript(value)]);
 						}
 					);
@@ -106,7 +106,7 @@ class ScriptFromObject {
 					this.expressions.push([
 						this.getScript(propertiesWithDescriptionOf["true true true"]),
 						".forEach(([k,v])=>{",
-						path,
+						this.path,
 						"[k]=v;})"
 					]);
 				}
@@ -125,7 +125,7 @@ class ScriptFromObject {
 							else key = JSON.stringify(key);
 							const addPropertyScript = [
 								"Object.defineProperty(",
-								path,
+								this.path,
 								",",
 								key,
 								",{value:",
@@ -141,7 +141,7 @@ class ScriptFromObject {
 					this.expressions.push([
 						this.getScript(propertiesWithDescriptionOf[descriptionsText]),
 						".forEach(([k,v])=>{Object.defineProperty(",
-						path,
+						this.path,
 						",k,{value:v,",
 						descriptor,
 						"});})"
