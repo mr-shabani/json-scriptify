@@ -36,9 +36,9 @@ var classes = [
 	},
 	{
 		type: Symbol,
-		toScript: function(obj, getScript,path) {
+		toScript: function(obj, getScript, path) {
 			let symbolVariable = getScript(obj.valueOf());
-			return [[path,"=Object(", symbolVariable, ")"]];
+			return [path, "=Object(", symbolVariable, ")"];
 		}
 	},
 	{
@@ -138,7 +138,8 @@ var classes = [
 
 			var hasNotSelfLoop = path.circularCitedChild ? false : true;
 			var scriptArray = script.map((scriptText, index) => {
-				if (index == 0 && hasNotSelfLoop) return [path,'=[',scriptText.join(","),']'];
+				if (index == 0 && hasNotSelfLoop)
+					return [path, "=[", scriptText.join(","), "]"];
 				if (scriptText[0] == ".") return [path, scriptText];
 				let expression = [];
 				scriptText.forEach(x => {
@@ -153,7 +154,7 @@ var classes = [
 				this.ignoreProperties.push(index.toString());
 			});
 
-			if (hasNotSelfLoop) return scriptArray;
+			if (hasNotSelfLoop) return { add: scriptArray };
 			return {
 				empty: "[]",
 				add: scriptArray
@@ -181,7 +182,7 @@ var classes = [
 					expression.push(cleanKey(key), ":", val, ",");
 				});
 				expression.pop();
-				return [[path, "={", ...expression, "}"]];
+				return [path, "={", ...expression, "}"];
 			}
 			script.forEach(([key, val]) => {
 				expression.push("[", JSON.stringify(key), ",", val, "]", ",");

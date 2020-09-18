@@ -17,11 +17,29 @@ class ScriptFromObject {
 		this.makeExpressions(obj);
 	}
 
+	addExpression(expression) {
+		if (typeof expression == "string") {
+			this.expressions.push([this.path, "=", expression]);
+			return;
+		}
+		if (expression instanceof Array) {
+			this.expressions.push(expression);
+			return;
+		}
+		if (typeof expression == "object") {
+			if (expression.empty)
+				this.expressions.splice(0, 0, [this.path, "=", expression.empty]);
+			if (expression.add)
+				expression.add.forEach(expr => {
+					this.addExpression(expr);
+				});
+		}
+	}
+
 	makeExpressions(obj) {
 		for (let type of typesToScript) {
 			if (type.isTypeOf(obj)) {
-				const replacement = type.toScript(obj);
-				this.expressions.push([this.path, "=", replacement]);
+				this.addExpression(type.toScript(obj));
 				return;
 			}
 		}
@@ -39,27 +57,12 @@ class ScriptFromObject {
 		var ignoreProperties = [];
 		for (let cls of classesToScript) {
 			if (isInstanceOf(cls.type, obj)) {
-				var index = this.expressions.length;
-				var expression = cls.toScript(obj, this.getScript, this.path);
+				const expression = cls.toScript(obj, this.getScript, this.path);
+				this.addExpression(expression);
 				ignoreProperties = cls.ignoreProperties || [];
-				if (expression instanceof Array == false) expression = [expression];
-				expression.forEach(expr => {
-					if (typeof expr == "string") {
-						this.expressions.push([this.path, "=", ...expr]);
-					} else if (expr instanceof Array) {
-						this.expressions.push(expr);
-					} else if (typeof expr == "object") {
-						this.expressions.splice(index, 0, [this.path, "=", expr.empty]);
-						if (expr.add instanceof Array == false) expr.add = [expr.add];
-						expr.add.forEach(addExpr => {
-							this.expressions.push(addExpr);
-						});
-					}
-				});
 				break;
 			}
 		}
-
 		this.makeScriptFromObjectProperties(obj, ignoreProperties);
 	}
 
