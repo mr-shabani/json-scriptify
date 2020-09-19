@@ -27,11 +27,18 @@ var VariableNameGenerator = function*() {
 
 var varNameGen = VariableNameGenerator();
 
+var lastInitTime = 0;
+
 class NodePath {
-	constructor(parentNode, key, isSymbol) {
-		if (parentNode) this.parent = parentNode;
+	constructor(key, parentNode, isSymbol) {
+		if (parentNode) {
+			this.parent = parentNode;
+			this.initTime = parentNode.initTime;
+		} else {
+			this.initTime = ++lastInitTime;
+		}
 		if (isSymbol) this.isSymbol = true;
-		if (key) this.key = key;
+		if (typeof key != "undefined") this.key = key;
 	}
 	addCircularCite(nodePath) {
 		if (this.circularCitedChild) this.circularCitedChild.push(nodePath);
@@ -42,11 +49,16 @@ class NodePath {
 		this.circularReference = circularReference;
 		circularReference.addCircularCite(this);
 	}
+	addWithNewInitTime(key, getScript) {
+		let newPath = this.add(key, getScript);
+		newPath.initTime = ++lastInitTime;
+		return newPath;
+	}
 	add(key, getScript) {
 		if (typeof key == "symbol") {
-			key = getScript(key);
-			var new_child = new NodePath(this, key, true);
-		} else var new_child = new NodePath(this, key);
+			key = getScript(key)[0];
+			var new_child = new NodePath(key, this, true);
+		} else var new_child = new NodePath(key, this);
 
 		if (this.child) this.child.push(new_child);
 		else this.child = [new_child];
@@ -55,13 +67,13 @@ class NodePath {
 	}
 	toString() {
 		if (this.parent) return this.addToPath(this.parent.toString(), this.key);
-		if (this.key) return this.key;
+		if (typeof this.key != "undefined") return this.key;
 		this.key = this.newName();
 		return this.key;
 	}
 	addToPath(pathText, keyText) {
 		if (this.isSymbol) return pathText + "[" + keyText + "]";
-		const alphabetCheckRegexp = /^[A-Za-z_]+$/;
+		const alphabetCheckRegexp = /^[A-Za-z_]+[A-Za-z0-9_]*$/;
 		if (String(parseInt(keyText)) == keyText && keyText != "NaN")
 			return pathText + "[" + parseInt(keyText) + "]";
 		if (alphabetCheckRegexp.test(keyText)) return pathText + "." + keyText;
@@ -72,13 +84,15 @@ class NodePath {
 	}
 	resetNameGenerator() {
 		varNameGen = VariableNameGenerator();
+		lastInitTime = 0;
+		this.initTime = ++lastInitTime;
 	}
 }
 
 var cleanKey = function(keyText) {
 	if (String(parseInt(keyText)) == keyText && keyText != "NaN")
 		return parseInt(keyText);
-	const alphabetCheckRegexp = /^[A-Za-z_]+$/;
+	const alphabetCheckRegexp = /^[A-Za-z_]+[A-Za-z0-9_]*$/;
 	if (alphabetCheckRegexp.test(keyText)) return keyText;
 	return JSON.stringify(keyText);
 };
@@ -134,10 +148,29 @@ var getSameProperties = function(obj, script) {
 	return sameProperties;
 };
 
+var insertBetween = function(arr, val) {
+	let newArray = [];
+	if (arguments.length == 2) {
+		arr.forEach(element => {
+			if (element instanceof Array)
+				newArray.push(...insertBetween(element), val);
+			else newArray.push(element, val);
+		});
+		newArray.pop();
+	} else {
+		arr.forEach(element => {
+			if (element instanceof Array) newArray.push(...insertBetween(element));
+			else newArray.push(element);
+		});
+	}
+	return newArray;
+};
+
 module.exports = {
 	isInstanceOf,
 	getSameProperties,
 	objectHasOnly,
 	NodePath,
-	cleanKey
+	cleanKey,
+	insertBetween
 };

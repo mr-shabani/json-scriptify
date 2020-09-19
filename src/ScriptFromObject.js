@@ -1,34 +1,41 @@
 var { classes: classesToScript, types: typesToScript } = require("./toScript");
-var { isInstanceOf, NodePath } = require("./helper");
+var { isInstanceOf, NodePath, insertBetween } = require("./helper");
 class ScriptFromObject {
-	constructor(obj, parent) {
+	constructor(obj, parent, path) {
 		this.getScript = this.getScript.bind(this);
 		this.expressions = [];
 		this.parent = parent;
 		if (parent) {
 			this.mark = parent.mark;
-			this.path = new NodePath();
+			this.path = path || new NodePath();
 		} else {
 			this.mark = new Map();
-			this.path = new NodePath(null, "obj");
+			this.path = new NodePath("obj");
 			this.path.resetNameGenerator();
 		}
 
 		this.makeExpressions(obj);
 	}
 
-	addExpression(expression) {
+	addExpression(expression, place) {
 		if (typeof expression == "string") {
-			this.expressions.push([this.path, "=", expression]);
+			if (typeof place == "number")
+				this.expressions.splice(place, 0, [this.path, "=", expression]);
+			else this.expressions.push([this.path, "=", expression]);
 			return;
 		}
 		if (expression instanceof Array) {
-			this.expressions.push(expression);
+			if (typeof place == "number")
+				this.expressions.splice(place, 0, expression);
+			else this.expressions.push(expression);
 			return;
 		}
 		if (typeof expression == "object") {
-			if (expression.empty)
-				this.expressions.splice(0, 0, [this.path, "=", expression.empty]);
+			if (expression.init) {
+				expression.init.forEach((expr, index) => {
+					this.addExpression(expr, index);
+				});
+			}
 			if (expression.add)
 				expression.add.forEach(expr => {
 					this.addExpression(expr);
@@ -49,7 +56,9 @@ class ScriptFromObject {
 		if (this.mark.has(obj)) {
 			let referencePath = this.mark.get(obj);
 			this.path.makeCircularTo(referencePath);
-			this.expressions.push([this.path, "=", referencePath]);
+			if (this.path.initTime > referencePath.initTime)
+				this.addExpression([this.path, "=", referencePath]);
+			else this.addExpression({ add: [[], [this.path, "=", referencePath]] });
 			return;
 		}
 		this.mark.set(obj, this.path);
@@ -101,13 +110,17 @@ class ScriptFromObject {
 				if (propertiesWithDescriptionOf["true true true"].length < 3) {
 					propertiesWithDescriptionOf["true true true"].forEach(
 						([key, value]) => {
-							const newPath = this.path.add(key, this.getScript);
-							this.expressions.push([newPath, "=", this.getScript(value)]);
+							const newPath = this.path.addWithNewInitTime(key, this.getScript);
+							let place = this.expressions.length;
+							this.addExpression(
+								[newPath, "=", ...this.getScript(value, newPath)],
+								place
+							);
 						}
 					);
 				} else {
-					this.expressions.push([
-						this.getScript(propertiesWithDescriptionOf["true true true"]),
+					this.addExpression([
+						...this.getScript(propertiesWithDescriptionOf["true true true"]),
 						".forEach(([k,v])=>{",
 						this.path,
 						"[k]=v;})"
@@ -124,25 +137,29 @@ class ScriptFromObject {
 				if (propertiesWithDescriptionOf[descriptionsText].length < 3) {
 					propertiesWithDescriptionOf[descriptionsText].forEach(
 						([key, value]) => {
-							if (typeof key == "symbol") key = this.getScript(key);
+							let newPath = this.path.addWithNewInitTime(key);
+							if (typeof key == "symbol") key = this.getScript(key)[0];
 							else key = JSON.stringify(key);
-							const addPropertyScript = [
-								"Object.defineProperty(",
-								this.path,
-								",",
-								key,
-								",{value:",
-								this.getScript(value),
-								",",
-								descriptor,
-								"})"
-							];
-							this.expressions.push(addPropertyScript);
+							let place = this.expressions.length;
+							this.addExpression(
+								[
+									"Object.defineProperty(",
+									this.path,
+									",",
+									key,
+									",{value:",
+									...this.getScript(value, newPath),
+									",",
+									descriptor,
+									"})"
+								],
+								place
+							);
 						}
 					);
 				} else {
-					this.expressions.push([
-						this.getScript(propertiesWithDescriptionOf[descriptionsText]),
+					this.addExpression([
+						...this.getScript(propertiesWithDescriptionOf[descriptionsText]),
 						".forEach(([k,v])=>{Object.defineProperty(",
 						this.path,
 						",k,{value:v,",
@@ -154,16 +171,21 @@ class ScriptFromObject {
 		});
 	}
 
-	getScript(obj) {
+	getScript(obj, path) {
 		let markSize = this.mark.size;
-		let objScript = new ScriptFromObject(obj, this);
+		let objScript = new ScriptFromObject(obj, this, path);
 		if (this.mark.size == markSize) {
 			if (objScript.expressions.length == 1) {
-				return objScript.expressions[0][2];
+				return objScript.expressions[0].slice(2);
 			}
 		}
-		this.expressions.push(...objScript.expressions);
-		return objScript.path;
+		if (path) {
+			let initExpression = objScript.expressions.shift();
+			this.addExpression({ add: objScript.expressions });
+			return initExpression.slice(2);
+		}
+		this.addExpression({ add: objScript.expressions });
+		return [objScript.path];
 	}
 
 	exportAsFunctionCall(options) {
@@ -182,7 +204,9 @@ class ScriptFromObject {
 			str += ` const _={};\n var ${this.path};\n `;
 		}
 
-		str += this.expressions.map(expr => expr.join("")).join(";\n ");
+		str += this.expressions
+			.map(expr => insertBetween(expr).join(""))
+			.join(";\n ");
 
 		return str;
 	}

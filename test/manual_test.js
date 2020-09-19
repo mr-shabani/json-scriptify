@@ -39,9 +39,9 @@ myObj.m.set(myObj.m, myObj);
 myObj.se.add(myObj.m);
 myObj.se.add(myObj.se);
 
-sym = Symbol("test");
-myObj = sym;
-myObj ={[sym]:sym}
+// sym = Symbol("test");
+// myObj = sym;
+// myObj = { [sym]: sym };
 // myObj = new String("1");
 // myObj.x = new String("2");
 // myObj.y = new String("5");
@@ -49,14 +49,35 @@ myObj ={[sym]:sym}
 // myObj.a = new String("4");
 
 // myObj = [1, 2, 3, [4, 5]];
-// myObj[4]=myObj;
+// myObj[4] = myObj;
 // myObj.length = 10;
 // myObj[11] = myObj[3];
-// myObj = {x:1,y:2,z:3,o:{x:1,y:2}};
+// myObj.x = 30;
+// myObj = {x:1,y:2,z:3,o:{x:1,y:2},oo:{y:4}};
 // myObj.cc  = myObj;
+// myObj.oo.c = myObj.o;
+
+// sym = Symbol("test");
+// myObj = Object(sym);
+// myObj.s = sym;
+// myObj.s2 = Symbol("test2");
+// myObj = { sym: myObj, sym2: myObj.s2 };
+
+// myObj = [1, 2, 3];
+// myObj.x = 1;
+// myObj[4] = 2;
+// myObj["6"] = 1;
+// sym = Symbol("test");
+// myObj.a = [sym, myObj, 3, 4];
+// myObj.a.b = { x: 1, [sym]: sym };
+// myObj.length = 20;
+
+// myObj = Object(BigInt(10));
+// myObj[true] = "4";
+// myObj.x = 1;
+// myObj.c = myObj;
 
 var script = json_scriptify(myObj);
-// var script = json_scriptify.withAllFunctions(obj);
 
 console.log(script);
 

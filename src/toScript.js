@@ -1,4 +1,9 @@
-var { objectHasOnly, getSameProperties, cleanKey } = require("./helper");
+var {
+	objectHasOnly,
+	getSameProperties,
+	cleanKey,
+	insertBetween
+} = require("./helper");
 var classes = [
 	{
 		type: "symbol",
@@ -37,8 +42,10 @@ var classes = [
 	{
 		type: Symbol,
 		toScript: function(obj, getScript, path) {
-			let symbolVariable = getScript(obj.valueOf());
-			return [path, "=Object(", symbolVariable, ")"];
+			return {
+				init: [[]],
+				add: [[path, "=", "Object(", ...getScript(obj.valueOf()), ")"]]
+			};
 		}
 	},
 	{
@@ -59,11 +66,15 @@ var classes = [
 		toScript: function(obj, getScript, path) {
 			let mapContentArray = Array.from(obj);
 			if (mapContentArray.length == 0) return "new Map()";
-			let mapContentArrayScript = getScript(mapContentArray);
 			return {
-				empty: "new Map()",
+				init: ["new Map()"],
 				add: [
-					[mapContentArrayScript, ".forEach(([k,v])=>{", path, ".set(k,v);})"]
+					[
+						...getScript(mapContentArray),
+						".forEach(([k,v])=>{",
+						path,
+						".set(k,v);})"
+					]
 				]
 			};
 		}
@@ -73,10 +84,11 @@ var classes = [
 		toScript: function(obj, getScript, path) {
 			let setContentArray = Array.from(obj);
 			if (setContentArray.length == 0) return "new Set()";
-			let setContentArrayScript = getScript(setContentArray);
 			return {
-				empty: "new Set()",
-				add: [[setContentArrayScript, ".forEach((v)=>{", path, ".add(v);})"]]
+				init: ["new Set()"],
+				add: [
+					[...getScript(setContentArray), ".forEach((v)=>{", path, ".add(v);})"]
+				]
 			};
 		}
 	},
@@ -112,23 +124,21 @@ var classes = [
 					script[++scriptIndex] = `.length = ${index}`;
 					script[++scriptIndex] = [];
 				}
-				script[scriptIndex].push(getScript(element, path));
+				let newPath = path.add(index.toString());
+				newPath.initTime += scriptIndex;
+				let elementScript = getScript(element, newPath);
+				if (elementScript.length) script[scriptIndex].push(elementScript);
+				else script[scriptIndex].push("null");
 				lastIndex = index;
 			});
 			if (lastIndex + 1 < obj.length)
 				script[++scriptIndex] = `.length = ${obj.length}`;
 
-			var hasNotSelfLoop = path.circularCitedChild ? false : true;
 			var scriptArray = script.map((scriptText, index) => {
-				if (index == 0 && hasNotSelfLoop)
-					return [path, "=[", scriptText.join(","), "]"];
+				if (index == 0)
+					return [path, "=", "[", insertBetween(scriptText, ","), "]"];
 				if (scriptText[0] == ".") return [path, scriptText];
-				let expression = [];
-				scriptText.forEach(x => {
-					expression.push(x, ",");
-				});
-				expression.pop();
-				return [path, ".push(", ...expression, ")"];
+				return [path, ".push(", insertBetween(scriptText, ","), ")"];
 			});
 
 			this.ignoreProperties = ["length"];
@@ -136,10 +146,8 @@ var classes = [
 				this.ignoreProperties.push(index.toString());
 			});
 
-			if (hasNotSelfLoop) return { add: scriptArray };
 			return {
-				empty: "[]",
-				add: scriptArray
+				init: scriptArray
 			};
 		}
 	},
@@ -151,29 +159,22 @@ var classes = [
 				var descriptor = Object.getOwnPropertyDescriptor(obj, key);
 				return descriptor.configurable && descriptor.writable;
 			});
-			var script = entries.map(([key, value]) => [key, getScript(value, path)]);
+			var script = entries.map(([key, value]) => [
+				key,
+				getScript(value, path.add(key))
+			]);
 
-			var hasNotSelfLoop = path.circularCitedChild ? false : true;
-
-			this.ignoreProperties = entries.map(([key, value]) => key);
+			this.ignoreProperties = entries.map(([key, valScript]) => key);
 
 			let expression = [];
 
-			if (hasNotSelfLoop) {
-				script.forEach(([key, val]) => {
-					expression.push(cleanKey(key), ":", val, ",");
-				});
-				expression.pop();
-				return [path, "={", ...expression, "}"];
-			}
-			script.forEach(([key, val]) => {
-				expression.push("[", JSON.stringify(key), ",", val, "]", ",");
+			script.forEach(([key, valScript]) => {
+				valScript = insertBetween(valScript);
+				if (valScript.length)
+					expression.push(cleanKey(key), ":", ...valScript, ",");
 			});
 			expression.pop();
-			return {
-				empty: "{}",
-				add: [["[", ...expression, "].forEach(([k,v])=>{", path, "[k]=v;})"]]
-			};
+			return { init: [[path, "=", "{", ...expression, "}"]] };
 		}
 	}
 ];
