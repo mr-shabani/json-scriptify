@@ -60,7 +60,6 @@ class ScriptFromObject {
 
 		if (this.mark.has(obj)) {
 			let referencePath = this.mark.get(obj);
-			this.path.makeCircularTo(referencePath);
 			if (this.path.initTime > referencePath.initTime)
 				this.addExpression(makeExpression(this.path, "=", referencePath));
 			else

@@ -40,15 +40,6 @@ class PathClass {
 		if (isSymbol) this.isSymbol = true;
 		if (typeof key != "undefined") this.key = key;
 	}
-	addCircularCite(nodePath) {
-		if (this.circularCitedChild) this.circularCitedChild.push(nodePath);
-		else this.circularCitedChild = [nodePath];
-	}
-	makeCircularTo(circularReference) {
-		this.isCircular = true;
-		this.circularReference = circularReference;
-		circularReference.addCircularCite(this);
-	}
 	addWithNewInitTime(key, getScript) {
 		let newPath = this.add(key, getScript);
 		newPath.initTime = ++lastInitTime;
@@ -57,13 +48,10 @@ class PathClass {
 	add(key, getScript) {
 		if (typeof key == "symbol") {
 			key = getScript(key);
-			var new_child = new PathClass(key, this, true);
-		} else var new_child = new PathClass(key, this);
+			var newPath = new PathClass(key, this, true);
+		} else var newPath = new PathClass(key, this);
 
-		if (this.child) this.child.push(new_child);
-		else this.child = [new_child];
-
-		return new_child;
+		return newPath;
 	}
 	toString() {
 		if (this.parent) return this.addToPath(this.parent.toString(), this.key);
