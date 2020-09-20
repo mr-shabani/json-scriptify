@@ -2,8 +2,11 @@ var {
 	objectHasOnly,
 	getSameProperties,
 	cleanKey,
-	insertBetween
+	insertBetween,
+	ExpressionClass
 } = require("./helper");
+var makeExpression = ExpressionClass.prototype.makeExpression;
+
 var classes = [
 	{
 		type: "symbol",
@@ -43,8 +46,8 @@ var classes = [
 		type: Symbol,
 		toScript: function(obj, getScript, path) {
 			return {
-				init: [[]],
-				add: [[path, "=", "Object(", ...getScript(obj.valueOf()), ")"]]
+				init: makeExpression(),
+				add: makeExpression(path, "=", "Object(", getScript(obj.valueOf()), ")")
 			};
 		}
 	},
@@ -67,15 +70,13 @@ var classes = [
 			let mapContentArray = Array.from(obj);
 			if (mapContentArray.length == 0) return "new Map()";
 			return {
-				init: ["new Map()"],
-				add: [
-					[
-						...getScript(mapContentArray),
-						".forEach(([k,v])=>{",
-						path,
-						".set(k,v);})"
-					]
-				]
+				init: "new Map()",
+				add: makeExpression(
+					getScript(mapContentArray),
+					".forEach(([k,v])=>{",
+					path,
+					".set(k,v);})"
+				)
 			};
 		}
 	},
@@ -85,10 +86,13 @@ var classes = [
 			let setContentArray = Array.from(obj);
 			if (setContentArray.length == 0) return "new Set()";
 			return {
-				init: ["new Set()"],
-				add: [
-					[...getScript(setContentArray), ".forEach((v)=>{", path, ".add(v);})"]
-				]
+				init: "new Set()",
+				add: makeExpression(
+					getScript(setContentArray),
+					".forEach((v)=>{",
+					path,
+					".add(v);})"
+				)
 			};
 		}
 	},
@@ -127,8 +131,8 @@ var classes = [
 				let newPath = path.add(index.toString());
 				newPath.initTime += scriptIndex;
 				let elementScript = getScript(element, newPath);
-				if (elementScript.length) script[scriptIndex].push(elementScript);
-				else script[scriptIndex].push("null");
+				if (elementScript.isEmpty()) script[scriptIndex].push("null");
+				else script[scriptIndex].push(elementScript);
 				lastIndex = index;
 			});
 			if (lastIndex + 1 < obj.length)
@@ -136,9 +140,20 @@ var classes = [
 
 			var scriptArray = script.map((scriptText, index) => {
 				if (index == 0)
-					return [path, "=", "[", insertBetween(scriptText, ","), "]"];
-				if (scriptText[0] == ".") return [path, scriptText];
-				return [path, ".push(", insertBetween(scriptText, ","), ")"];
+					return makeExpression(
+						path,
+						"=",
+						"[",
+						insertBetween(scriptText, ","),
+						"]"
+					);
+				if (scriptText[0] == ".") return makeExpression(path, scriptText);
+				return makeExpression(
+					path,
+					".push(",
+					insertBetween(scriptText, ","),
+					")"
+				);
 			});
 
 			this.ignoreProperties = ["length"];
@@ -169,12 +184,11 @@ var classes = [
 			let expression = [];
 
 			script.forEach(([key, valScript]) => {
-				valScript = insertBetween(valScript);
-				if (valScript.length)
-					expression.push(cleanKey(key), ":", ...valScript, ",");
+				if (valScript.isEmpty() == false)
+					expression.push(cleanKey(key), ":", valScript, ",");
 			});
 			expression.pop();
-			return { init: [[path, "=", "{", ...expression, "}"]] };
+			return { init: makeExpression(path, "=", "{", expression, "}") };
 		}
 	}
 ];
