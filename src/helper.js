@@ -1,10 +1,14 @@
-var addToPath = function(path, key) {
-	const alphabetCheckRegexp = /^[A-Za-z_]+$/;
-	if (String(parseInt(key)) == key && key != "NaN")
-		return path + "[" + parseInt(key) + "]";
-	if (alphabetCheckRegexp.test(key)) return path + "." + key;
-	return path + "[" + JSON.stringify(key) + "]";
+var PathClass = require("./PathClass");
+var { makeFlat, ExpressionClass } = require("./ExpressionClass");
+
+var cleanKey = function(keyText) {
+	if (String(parseInt(keyText)) == keyText && keyText != "NaN")
+		return parseInt(keyText);
+	const alphabetCheckRegexp = /^[A-Za-z_]+[A-Za-z0-9_]*$/;
+	if (alphabetCheckRegexp.test(keyText)) return keyText;
+	return JSON.stringify(keyText);
 };
+
 var isInstanceOf = function(type, obj) {
 	if (typeof type == "string") return typeof obj == type;
 	if (obj instanceof type) return true;
@@ -29,4 +33,58 @@ var objectHasOnly = function(obj, props) {
 	return true;
 };
 
-module.exports = { addToPath, isInstanceOf, isEmptyObject, objectHasOnly };
+var getSameProperties = function(obj, script) {
+	eval(`
+			var PleaseDoNotUseThisNameThatReservedForScriptifyModule = ${script}
+			`);
+	const evaluated_obj = PleaseDoNotUseThisNameThatReservedForScriptifyModule;
+	var sameProperties = Object.getOwnPropertyNames(evaluated_obj).filter(key => {
+		if (!(isEmptyObject(obj[key]) && isEmptyObject(evaluated_obj[key]))) {
+			if (
+				obj[key] !== evaluated_obj[key] &&
+				!Object.is(evaluated_obj[key], obj[key])
+			)
+				return false;
+		}
+		let descriptor_evalObj = Object.getOwnPropertyDescriptor(
+			evaluated_obj,
+			key
+		);
+		let descriptor_obj = Object.getOwnPropertyDescriptor(obj, key);
+		return (
+			descriptor_evalObj.writable == descriptor_obj.writable &&
+			descriptor_evalObj.configurable == descriptor_obj.configurable &&
+			descriptor_evalObj.enumerable == descriptor_obj.enumerable
+		);
+	});
+	return sameProperties;
+};
+
+var insertBetween = function(arr, val) {
+	let newArray = [];
+	if (arguments.length == 2) {
+		arr.forEach(element => {
+			if (element instanceof Array)
+				newArray.push(...insertBetween(element), val);
+			else newArray.push(element, val);
+		});
+		newArray.pop();
+	} else {
+		arr.forEach(element => {
+			if (element instanceof Array) newArray.push(...insertBetween(element));
+			else newArray.push(element);
+		});
+	}
+	return newArray;
+};
+
+module.exports = {
+	isInstanceOf,
+	getSameProperties,
+	objectHasOnly,
+	PathClass,
+	cleanKey,
+	insertBetween,
+	makeFlat,
+	ExpressionClass
+};

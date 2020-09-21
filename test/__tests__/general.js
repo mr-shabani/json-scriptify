@@ -40,7 +40,7 @@ test("simple plain JSON object with special character in keys", function() {
 	expect(checkFor({ "\n": 1 })).toEqual(true);
 	expect(checkFor({ '"': 1 })).toEqual(true);
 	expect(checkFor({ "'": 1 })).toEqual(true);
-	expect(checkFor({ '1': 1 })).toEqual(true);
+	expect(checkFor({ "1": 1 })).toEqual(true);
 	let obj = {};
 	obj["#"] = obj;
 	expect(checkFor(obj)).toEqual(true);
@@ -52,6 +52,25 @@ test("simple plain JSON object with special character in keys", function() {
 	expect(checkFor(obj)).toEqual(true);
 	obj['"'] = obj;
 	expect(checkFor(obj)).toEqual(true);
-	obj[''] = obj;
+	obj[""] = obj;
+	expect(checkFor(obj)).toEqual(true);
+});
+
+test("JSON object", function() {
+	var obj = { x: 1, y: 2 };
+	expect(checkFor(obj)).toEqual(true);
+	obj.b = true;
+	expect(checkFor(obj)).toEqual(true);
+	obj.c = obj;
+	expect(checkFor(obj)).toEqual(true);
+	obj.o = { z: 3 };
+	obj.oo = { a: 4, cc: obj.o };
+	expect(checkFor(obj)).toEqual(true);
+	Object.defineProperty(obj, "e", { value: 5, enumerable: true });
+	expect(checkFor(obj)).toEqual(true);
+	Object.defineProperty(obj, "q", { value: obj.oo, enumerable: true });
+	expect(checkFor(obj)).toEqual(true);
+	let sym = Symbol("test");
+	obj[sym] = sym;
 	expect(checkFor(obj)).toEqual(true);
 });

@@ -1,5 +1,56 @@
-var { objectHasOnly, isEmptyObject, addToPath } = require("./helper");
+var {
+	objectHasOnly,
+	getSameProperties,
+	cleanKey,
+	insertBetween,
+	ExpressionClass
+} = require("./helper");
+var makeExpression = ExpressionClass.prototype.makeExpression;
+
 var classes = [
+	{
+		type: "symbol",
+		toScript: function(obj) {
+			let symbolDescription = String(obj).slice(7, -1);
+			return `Symbol("${symbolDescription}")`;
+		}
+	},
+	{
+		type: Number,
+		toScript: function(obj) {
+			return `new Number(${JSON.stringify(obj)})`;
+		}
+	},
+	{
+		type: BigInt,
+		toScript: function(obj) {
+			return `Object(BigInt(${obj.valueOf().toString()}))`;
+		}
+	},
+	{
+		type: Boolean,
+		toScript: function(obj) {
+			return `new Boolean(${JSON.stringify(obj)})`;
+		}
+	},
+	{
+		type: String,
+		toScript: function(obj) {
+			this.ignoreProperties = ["length"];
+			for (let i = 0; i < obj.length; ++i)
+				if (obj.hasOwnProperty(i)) this.ignoreProperties.push(i.toString());
+			return `new String(${JSON.stringify(obj)})`;
+		}
+	},
+	{
+		type: Symbol,
+		toScript: function(obj, getScript, path) {
+			return {
+				init: makeExpression(),
+				add: makeExpression(path, "=", "Object(", getScript(obj.valueOf()), ")")
+			};
+		}
+	},
 	{
 		type: Date,
 		toScript: function(obj) {
@@ -9,33 +60,49 @@ var classes = [
 	{
 		type: RegExp,
 		toScript: function(obj) {
+			this.ignoreProperties = getSameProperties(obj, obj.toString());
 			return obj.toString();
 		}
 	},
 	{
 		type: Map,
-		toScript: function(obj, getScript) {
+		toScript: function(obj, getScript, path) {
 			let mapContentArray = Array.from(obj);
 			if (mapContentArray.length == 0) return "new Map()";
-			let mapContentArrayScript = getScript(mapContentArray);
 			return {
-				empty: "new Map()",
-				add: varName =>
-					`${mapContentArrayScript}.forEach(([k,v])=>{${varName}.set(k,v);})`
+				init: "new Map()",
+				add: makeExpression(
+					getScript(mapContentArray),
+					".forEach(([k,v])=>{",
+					path,
+					".set(k,v);})"
+				)
 			};
 		}
 	},
 	{
 		type: Set,
-		toScript: function(obj, getScript) {
+		toScript: function(obj, getScript, path) {
 			let setContentArray = Array.from(obj);
 			if (setContentArray.length == 0) return "new Set()";
-			let setContentArrayScript = getScript(setContentArray);
 			return {
-				empty: "new Set()",
-				add: varName =>
-					`${setContentArrayScript}.forEach((v)=>{${varName}.add(v);})`
+				init: "new Set()",
+				add: makeExpression(
+					getScript(setContentArray),
+					".forEach((v)=>{",
+					path,
+					".add(v);})"
+				)
 			};
+		}
+	},
+	{
+		type: Function,
+		toScript: function(obj) {
+			this.ignoreProperties = getSameProperties(obj, obj.toString());
+			if (objectHasOnly(obj.prototype, { constructor: obj }))
+				this.ignoreProperties.push("prototype");
+			return obj.toString();
 		}
 	},
 	{
@@ -51,69 +118,42 @@ var classes = [
 		}
 	},
 	{
-		type: Function,
-		toScript: function(obj, getScript) {
-			eval(`
-			var PleaseDoNotUseThisNameThatReservedForScriptifyModule = ${obj.toString()}
-			`);
-			const f = PleaseDoNotUseThisNameThatReservedForScriptifyModule;
-			this.ignoreProperties = Object.getOwnPropertyNames(f).filter(key => {
-				if (!(isEmptyObject(obj[key]) && isEmptyObject(f[key]))) {
-					if (obj[key] !== f[key] && !Object.is(f[key], obj[key])) return false;
-				}
-				let descriptor_f = Object.getOwnPropertyDescriptor(f, key);
-				let descriptor_obj = Object.getOwnPropertyDescriptor(obj, key);
-				return (
-					descriptor_f.writable == descriptor_obj.writable &&
-					descriptor_f.configurable == descriptor_obj.configurable &&
-					descriptor_f.enumerable == descriptor_obj.enumerable
-				);
-			});
-			if (
-				objectHasOnly(obj.prototype, { constructor: obj }) &&
-				objectHasOnly(f.prototype, { constructor: f })
-			)
-				this.ignoreProperties.push("prototype");
-			return obj.toString();
-		}
-	},
-	{
 		type: Array,
 		toScript: function(obj, getScript, path) {
-			var hasSelfLoop = false;
-			var script = [""];
+			var script = [[]];
 			var lastIndex = -1;
 			var scriptIndex = 0;
 			obj.forEach((element, index) => {
 				if (lastIndex != index - 1) {
-					const length = script[scriptIndex].length;
-					if (script[scriptIndex][length - 1] == ",")
-						script[scriptIndex] = script[scriptIndex].substr(
-							0,
-							script[scriptIndex].length - 1
-						);
 					script[++scriptIndex] = `.length = ${index}`;
-					script[++scriptIndex] = "";
+					script[++scriptIndex] = [];
 				}
-				script[scriptIndex] += getScript(element, path) + ",";
-				if (scriptIndex == 0)
-					hasSelfLoop = hasSelfLoop || getScript.hasSelfLoop;
+				let newPath = path.add(index.toString());
+				newPath.initTime += scriptIndex;
+				let elementScript = getScript(element, newPath);
+				if (elementScript.isEmpty()) script[scriptIndex].push("null");
+				else script[scriptIndex].push(elementScript);
 				lastIndex = index;
 			});
-			const length = script[scriptIndex].length;
-			if (script[scriptIndex][length - 1] == ",")
-				script[scriptIndex] = script[scriptIndex].substr(
-					0,
-					script[scriptIndex].length - 1
-				);
-
 			if (lastIndex + 1 < obj.length)
 				script[++scriptIndex] = `.length = ${obj.length}`;
 
-			scriptArray = script.map((scriptText, index) => {
-				if (index == 0 && !hasSelfLoop) return `[${scriptText}]`;
-				if (scriptText[0] == ".") return varName => varName + scriptText;
-				return varName => `${varName}.push(${scriptText})`;
+			var scriptArray = script.map((scriptText, index) => {
+				if (index == 0)
+					return makeExpression(
+						path,
+						"=",
+						"[",
+						insertBetween(scriptText, ","),
+						"]"
+					);
+				if (scriptText[0] == ".") return makeExpression(path, scriptText);
+				return makeExpression(
+					path,
+					".push(",
+					insertBetween(scriptText, ","),
+					")"
+				);
 			});
 
 			this.ignoreProperties = ["length"];
@@ -121,52 +161,34 @@ var classes = [
 				this.ignoreProperties.push(index.toString());
 			});
 
-			if (hasSelfLoop)
-				return {
-					empty: "[]",
-					add: scriptArray
-				};
-			return scriptArray;
+			return {
+				init: scriptArray
+			};
 		}
 	},
 	{
-		type: String,
-		toScript: function(obj, getScript) {
-			this.ignoreProperties = ["length"];
-			for (let i = 0; i < obj.length; ++i)
-				if (obj.hasOwnProperty(i)) this.ignoreProperties.push(i.toString());
-			return `new String(${JSON.stringify(obj)})`;
-		}
-	},
-	{
-		type: Number,
-		toScript: function(obj, getScript) {
-			return `new Number(${JSON.stringify(obj)})`;
-		}
-	},
-	{
-		type: BigInt,
-		toScript: function(obj, getScript) {
-			return `Object(BigInt(${obj.valueOf().toString()}))`;
-		}
-	},
-	{
-		type: Boolean,
-		toScript: function(obj, getScript) {
-			return `new Boolean(${JSON.stringify(obj)})`;
-		}
-	},
-	{
-		type: "symbol",
-		toScript: function(obj) {
-			let symbolDescription = String(obj).slice(7, -1);
-			return `Symbol("${symbolDescription}")`;
-		}
-	},
-	{
-		type: Symbol,
-		toScript: function(obj, getScript) {
-			return `Object(${getScript(obj.valueOf())})`;
+		// This item always must be at the end of the list
+		type: "object",
+		toScript: function(obj, getScript, path) {
+			var entries = Object.entries(obj).filter(([key, value]) => {
+				var descriptor = Object.getOwnPropertyDescriptor(obj, key);
+				return descriptor.configurable && descriptor.writable;
+			});
+			var script = entries.map(([key, value]) => [
+				key,
+				getScript(value, path.add(key))
+			]);
+
+			this.ignoreProperties = entries.map(([key, valScript]) => key);
+
+			let expression = [];
+
+			script.forEach(([key, valScript]) => {
+				if (valScript.isEmpty() == false)
+					expression.push(cleanKey(key), ":", valScript, ",");
+			});
+			expression.pop();
+			return { init: makeExpression(path, "=", "{", expression, "}") };
 		}
 	}
 ];
@@ -206,6 +228,24 @@ var types = [
 		isTypeOf: obj => Object.is(obj, -Infinity),
 		toScript: function(obj) {
 			return "-Infinity";
+		}
+	},
+	{
+		isTypeOf: obj => typeof obj == "string",
+		toScript: function(obj) {
+			return JSON.stringify(obj);
+		}
+	},
+	{
+		isTypeOf: obj => typeof obj == "boolean",
+		toScript: function(obj) {
+			return obj.toString();
+		}
+	},
+	{
+		isTypeOf: obj => typeof obj == "number",
+		toScript: function(obj) {
+			return obj.toString();
 		}
 	}
 ];

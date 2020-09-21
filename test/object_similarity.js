@@ -17,7 +17,7 @@ var checkSimilarity = function(obj1, obj2) {
 	)
 		return obj1 == obj2;
 
-	if (mark.has(obj1)) return mark.get(obj1) == obj2;
+	if (mark.has(obj1)) return mark.get(obj1) === obj2;
 
 	mark.set(obj1, obj2);
 
