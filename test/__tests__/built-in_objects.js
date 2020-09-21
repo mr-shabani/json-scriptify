@@ -70,3 +70,87 @@ test("Set class with circular", function() {
 	set.add(obj);
 	expect(checkFor(obj)).toEqual(true);
 });
+
+test("function with properties", function() {
+	var obj = () => 1;
+	obj.x = 1;
+	obj.f = obj;
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ f: obj })).toEqual(true);
+});
+
+test("String object with properties", function() {
+	var obj = new String("0123");
+	obj[4] = "4";
+	obj[2n] = "5";
+	obj.x = 1;
+	obj.c = obj;
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ s: obj })).toEqual(true);
+});
+
+test("Number object with properties", function() {
+	var obj = new Number(123);
+	obj[4] = "4";
+	obj.x = 1;
+	obj.c = obj;
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ n: obj })).toEqual(true);
+});
+
+test("Boolean object with properties", function() {
+	var obj = new Boolean();
+	obj[true] = "4";
+	obj.x = 1;
+	obj.c = obj;
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ b: obj })).toEqual(true);
+});
+
+test("BigInt object with properties", function() {
+	var obj = Object(BigInt(10));
+	obj[true] = "4";
+	obj.x = 1;
+	obj.c = obj;
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ BI: obj })).toEqual(true);
+});
+
+test("Symbol type", function() {
+	var obj = Symbol("test");
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ sym: obj, sym2: obj })).toEqual(true);
+});
+
+test("Symbol object class", function() {
+	var sym = Symbol("test");
+	var obj = Object(sym);
+	obj.s = sym;
+	obj.s2 = Symbol("test2");
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ sym: obj, sym2: obj.s2 })).toEqual(true);
+});
+
+test("Array object class", function() {
+	var obj = [1, 2, 3, [4, 5, 6, [7, 8, 9]]];
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ a: obj })).toEqual(true);
+	obj[10] = ["a", "b", ["c", "d"]];
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ a: obj })).toEqual(true);
+	obj[10][2][10] = obj[3][3][0];
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ a: obj })).toEqual(true);
+	obj[11]={x:1,y:2};
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ a: obj })).toEqual(true);
+	obj.length = 20;
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ a: obj })).toEqual(true);
+	obj.x = [1,2,3];
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ a: obj })).toEqual(true);
+	obj[Symbol()]=[2,3];
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ a: obj })).toEqual(true);
+});
