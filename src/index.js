@@ -1,42 +1,16 @@
-var objectSet = new Set();
-var { traverse, definitionList } = require("./helper");
-
-var replacer = function(key, value) {
-	if (typeof value == "object") {
-		if (objectSet.has(value)) {
-			return;
-		}
-		objectSet.add(value);
-	}
-	return value;
-};
+var ScriptFromObject = require("./ScriptFromObject");
 
 var scriptify = function(obj, options) {
-	options = options || {};
-	
-	objectSet.clear();
 
-    traverse(obj, "obj");
+	var scriptFromObject = new ScriptFromObject(obj);
 
-	var str = "(function(){\n//version 1\n";
-	str +=
-		"  var obj = " + JSON.stringify(obj, replacer) + ";\n//Circular references";
-	definitionList.circularReferences.forEach(([path, reference]) => {
-		str += "\n" + "  " + path + " = " + reference + ";";
-    });
+	const script = scriptFromObject.exportAsFunctionCall(options);
 
-	if (options.withAllFunctions) {
-		str += "\n//Functions";
-		definitionList.functionList.forEach(([path, code]) => {
-			str += "\n" + "  " + path + " = " + code + ";";
-		});
-	}
-	str += "\n  return obj;\n})()";
-	return str;
+	return script;
 };
 
-scriptify.withAllFunctions = function(obj) {
-	return scriptify(obj, { withAllFunctions: true });
-};
+// scriptify.withAllFunctions = function(obj) {
+// 	return scriptify(obj, { withAllFunctions: true });
+// };
 
 module.exports = scriptify;
