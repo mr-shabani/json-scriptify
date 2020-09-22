@@ -2,7 +2,7 @@ var { classes: classesToScript, types: typesToScript } = require("./toScript");
 var { isInstanceOf, PathClass, ExpressionClass } = require("./helper");
 var makeExpression = ExpressionClass.prototype.makeExpression;
 
-class ScriptFromObject {
+class ScriptClass {
 	constructor(obj, parent, path) {
 		this.getScript = this.getScript.bind(this);
 		this.expressions = [];
@@ -24,7 +24,10 @@ class ScriptFromObject {
 			this.addExpression(makeExpression(this.path, "=", expression), place);
 			return;
 		}
-		if (expression instanceof ExpressionClass) {
+		if (
+			expression instanceof ExpressionClass ||
+			expression instanceof ScriptClass
+		) {
 			if (typeof place == "number")
 				this.expressions.splice(place, 0, expression);
 			else this.expressions.push(expression);
@@ -118,12 +121,15 @@ class ScriptFromObject {
 				if (propertiesWithDescriptionOf["true true true"].length < 3) {
 					propertiesWithDescriptionOf["true true true"].forEach(
 						([key, value]) => {
-							const newPath = this.path.addWithNewInitTime(key, this.getScript);
-							let place = this.expressions.length;
-							this.addExpression(
-								makeExpression(newPath, "=", this.getScript(value, newPath)),
-								place
+							const valuePath = this.path.addWithNewInitTime(
+								key,
+								this.getScript
 							);
+							let valueScript = this.getScript(value, valuePath);
+							this.addExpression([
+								makeExpression(valuePath, "=", valueScript.popInit()),
+								valueScript
+							]);
 						}
 					);
 				} else {
@@ -147,24 +153,24 @@ class ScriptFromObject {
 				if (propertiesWithDescriptionOf[descriptionsText].length < 3) {
 					propertiesWithDescriptionOf[descriptionsText].forEach(
 						([key, value]) => {
-							let newPath = this.path.addWithNewInitTime(key);
 							if (typeof key == "symbol") key = this.getScript(key)[0];
 							else key = JSON.stringify(key);
-							let place = this.expressions.length;
-							this.addExpression(
+							let valuePath = this.path.addWithNewInitTime(key);
+							let valueScript = this.getScript(value, valuePath);
+							this.addExpression([
 								makeExpression(
 									"Object.defineProperty(",
 									this.path,
 									",",
 									key,
 									",{value:",
-									this.getScript(value, newPath),
+									valueScript.popInit(),
 									",",
 									descriptor,
 									"})"
 								),
-								place
-							);
+								valueScript
+							]);
 						}
 					);
 				} else {
@@ -185,41 +191,43 @@ class ScriptFromObject {
 
 	getScript(obj, path) {
 		let markSize = this.mark.size;
-		let objScript = new ScriptFromObject(obj, this, path);
+		let objScript = new ScriptClass(obj, this, path);
+		if (path) return objScript;
 		if (this.mark.size == markSize) {
-			if (objScript.expressions.length == 1) {
-				return objScript.expressions[0].removeAssignment();
-			}
+			if (objScript.expressions.length == 1) return objScript.popInit();
 		}
-		if (path) {
-			let initExpression = objScript.expressions.shift();
-			this.addExpression(objScript.expressions);
-			return initExpression.removeAssignment();
-		}
-		this.addExpression(objScript.expressions);
+		this.addExpression(objScript);
 		return objScript.path;
 	}
 
-	exportAsFunctionCall(options) {
+	exportAsFunctionCall() {
 		var str = "(function(){//version 1\n";
-		str += this.getRawScript(options);
-		if (this.parent) str += `\n })()`;
-		else str += `\n return ${this.path};\n})()`;
+		if (!this.parent) str += ` const _={};\n var ${this.path};\n `;
+		str += this.getRawScript();
+		if (this.parent) str += ` })()`;
+		else str += ` return ${this.path};\n})()`;
 		return str;
 	}
 
-	getRawScript(options) {
-		options = options || {};
+	getRawScript() {
+		var script = "";
+		this.expressions.forEach(expr => {
+			if (expr instanceof ExpressionClass && expr.isEmpty() == false)
+				script += expr + ";\n";
+			if (expr instanceof ScriptClass) script += expr.getRawScript();
+			if (typeof expr == "string") script += expr;
+		});
+		return script;
+	}
 
-		var str = "";
-		if (!this.parent) {
-			str += ` const _={};\n var ${this.path};\n `;
-		}
-
-		str += this.expressions.join(";\n ");
-
-		return str;
+	popInit() {
+		let init = this.expressions.shift();
+		if (init instanceof ExpressionClass) return init.removeAssignment();
+		if (init instanceof ScriptClass) return init.popInit();
+	}
+	toString() {
+		return this.getRawScript();
 	}
 }
 
-module.exports = ScriptFromObject;
+module.exports = ScriptClass;

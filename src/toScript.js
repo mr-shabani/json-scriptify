@@ -120,25 +120,29 @@ var classes = [
 	{
 		type: Array,
 		toScript: function(obj, getScript, path) {
-			var script = [[]];
+			var initScript = [[]];
+			var addScript = [[]];
 			var lastIndex = -1;
 			var scriptIndex = 0;
 			obj.forEach((element, index) => {
 				if (lastIndex != index - 1) {
-					script[++scriptIndex] = `.length = ${index}`;
-					script[++scriptIndex] = [];
+					initScript[++scriptIndex] = `.length = ${index}`;
+					initScript[++scriptIndex] = [];
+					addScript[scriptIndex] = [];
 				}
-				let newPath = path.add(index.toString());
-				newPath.initTime += scriptIndex;
-				let elementScript = getScript(element, newPath);
-				if (elementScript.isEmpty()) script[scriptIndex].push("null");
-				else script[scriptIndex].push(elementScript);
+				let indexPath = path.add(index.toString());
+				indexPath.initTime += scriptIndex;
+				let elementScript = getScript(element, indexPath);
+				let elementInit = elementScript.popInit();
+				if (elementInit.isEmpty()) initScript[scriptIndex].push("null");
+				else initScript[scriptIndex].push(elementInit);
+				addScript[scriptIndex].push(elementScript);
 				lastIndex = index;
 			});
 			if (lastIndex + 1 < obj.length)
-				script[++scriptIndex] = `.length = ${obj.length}`;
+				initScript[++scriptIndex] = `.length = ${obj.length}`;
 
-			var scriptArray = script.map((scriptText, index) => {
+			initScript = initScript.map((scriptText, index) => {
 				if (index == 0)
 					return makeExpression(
 						path,
@@ -162,7 +166,8 @@ var classes = [
 			});
 
 			return {
-				init: scriptArray
+				init: initScript,
+				add: addScript
 			};
 		}
 	},
@@ -184,11 +189,15 @@ var classes = [
 			let expression = [];
 
 			script.forEach(([key, valScript]) => {
-				if (valScript.isEmpty() == false)
-					expression.push(cleanKey(key), ":", valScript, ",");
+				let initValueScript = valScript.popInit();
+				if (initValueScript.isEmpty() == false)
+					expression.push(cleanKey(key), ":", initValueScript, ",");
 			});
 			expression.pop();
-			return { init: makeExpression(path, "=", "{", expression, "}") };
+			return {
+				init: makeExpression(path, "=", "{", expression, "}"),
+				add: script.map(([key, valScript]) => valScript)
+			};
 		}
 	}
 ];
