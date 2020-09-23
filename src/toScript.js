@@ -124,14 +124,16 @@ var classes = [
 			var addScript = [[]];
 			var lastIndex = -1;
 			var scriptIndex = 0;
+			var initTime = path.initTime;
 			obj.forEach((element, index) => {
 				if (lastIndex != index - 1) {
 					initScript[++scriptIndex] = `.length = ${index}`;
 					initScript[++scriptIndex] = [];
 					addScript[scriptIndex] = [];
+					initTime = path.getNewInitTime();
 				}
 				let indexPath = path.add(index.toString());
-				indexPath.initTime += scriptIndex;
+				indexPath.initTime = initTime;
 				let elementScript = getScript(element, indexPath);
 				let elementInit = elementScript.popInit();
 				if (elementInit.isEmpty()) initScript[scriptIndex].push("null");

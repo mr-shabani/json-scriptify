@@ -9,13 +9,15 @@ class ScriptClass {
 		this.parent = parent;
 		if (parent) {
 			this.mark = parent.mark;
-			this.path = path || new PathClass();
+			if (typeof path == "undefined") {
+				this.path = new PathClass();
+				this.path.getSharedItems(parent.path);
+			} else this.path = path;
 		} else {
 			this.mark = new Map();
 			this.path = new PathClass("obj");
-			this.path.resetNameGenerator();
+			this.path.newSharedItems();
 		}
-
 		this.createExpressions(obj);
 	}
 
@@ -24,10 +26,14 @@ class ScriptClass {
 			this.addExpression(makeExpression(this.path, "=", expression), place);
 			return;
 		}
-		if (
-			expression instanceof ExpressionClass ||
-			expression instanceof ScriptClass
-		) {
+		if (expression instanceof ExpressionClass) {
+			if (typeof place == "number")
+				this.expressions.splice(place, 0, expression);
+			else this.expressions.push(expression);
+			return;
+		}
+		if (expression instanceof ScriptClass) {
+			if (expression.expressions.length == 0) return;
 			if (typeof place == "number")
 				this.expressions.splice(place, 0, expression);
 			else this.expressions.push(expression);
@@ -63,7 +69,7 @@ class ScriptClass {
 
 		if (this.mark.has(obj)) {
 			let referencePath = this.mark.get(obj);
-			if (this.path.initTime > referencePath.initTime)
+			if (referencePath.isBefore(this.path))
 				this.addExpression(makeExpression(this.path, "=", referencePath));
 			else
 				this.addExpression([
@@ -202,10 +208,14 @@ class ScriptClass {
 
 	exportAsFunctionCall() {
 		var str = "(function(){//version 1\n";
-		if (!this.parent) str += ` const _={};\n var ${this.path};\n `;
-		str += this.getRawScript();
-		if (this.parent) str += ` })()`;
-		else str += ` return ${this.path};\n})()`;
+		let rawScript = this.getRawScript();
+		if (!this.parent) {
+			if (this.path.newName() != "_.a") str += ` const _={};\n`;
+			str += ` var ${this.path};\n `;
+		}
+		str += rawScript;
+		if (this.parent) str += `})()`;
+		else str += `return ${this.path};\n})()`;
 		return str;
 	}
 
@@ -213,7 +223,7 @@ class ScriptClass {
 		var script = "";
 		this.expressions.forEach(expr => {
 			if (expr instanceof ExpressionClass && expr.isEmpty() == false)
-				script += expr + ";\n";
+				script += expr + ";\n ";
 			if (expr instanceof ScriptClass) script += expr.getRawScript();
 			if (typeof expr == "string") script += expr;
 		});
