@@ -1,48 +1,37 @@
-var VariableNameGenerator = function*() {
-	let varName = ["a"];
-	var charCode;
-	var plusPlus = function() {
-		let length = varName.length;
-		var addition = true;
-		for (let i = 0; i < length; ++i) {
-			if (!addition) break;
-			if (varName[i] == "Z") {
-				varName[i] = "a";
-			} else {
-				if (varName[i] == "z") varName[i] = "A";
-				else {
-					charCode = varName[i].charCodeAt(0);
-					varName[i] = String.fromCharCode(charCode + 1);
-				}
-				addition = false;
-			}
-		}
-		if (addition) varName.push("a");
-	};
-	while (true) {
-		yield "_." + varName.join("");
-		plusPlus();
+const alphabet = [];
+for (let ch = "a"; ch <= "z"; ch = String.fromCharCode(ch.charCodeAt(0) + 1))
+	alphabet.push(ch);
+for (let ch = "A"; ch <= "Z"; ch = String.fromCharCode(ch.charCodeAt(0) + 1))
+	alphabet.push(ch);
+
+var numberToAlphabetString = function(num) {
+	let alphabetString = alphabet[num % alphabet.length];
+	num = Math.floor(num / alphabet.length);
+	while (num) {
+		alphabetString += alphabet[num % alphabet.length];
+		num = Math.floor(num / alphabet.length);
 	}
+	return alphabetString;
 };
 
-var varNameGen = VariableNameGenerator();
-
-var lastInitTime = 0;
+var VariableNameGenerator = function*() {
+	let keyNumber = 0;
+	while (true) yield "_." + numberToAlphabetString(keyNumber++);
+};
 
 class PathClass {
 	constructor(key, parentNode, isSymbol) {
 		if (parentNode) {
 			this.parent = parentNode;
 			this.initTime = parentNode.initTime;
-		} else {
-			this.initTime = ++lastInitTime;
+			this.shared = parentNode.shared;
 		}
 		if (isSymbol) this.isSymbol = true;
 		if (typeof key != "undefined") this.key = key;
 	}
 	addWithNewInitTime(key, getScript) {
 		let newPath = this.add(key, getScript);
-		newPath.initTime = ++lastInitTime;
+		newPath.initTime = ++this.shared.lastInitTime;
 		return newPath;
 	}
 	add(key, getScript) {
@@ -68,12 +57,22 @@ class PathClass {
 		return pathText + "[" + JSON.stringify(keyText) + "]";
 	}
 	newName() {
-		return varNameGen.next().value;
+		return this.shared.varNameGen.next().value;
 	}
-	resetNameGenerator() {
-		varNameGen = VariableNameGenerator();
-		lastInitTime = 0;
-		this.initTime = ++lastInitTime;
+	newSharedItems() {
+		this.shared = { varNameGen: VariableNameGenerator(), lastInitTime: 0 };
+		this.initTime = ++this.shared.lastInitTime;
+	}
+	isBefore(path) {
+		return this.initTime < path.initTime;
+	}
+	getNewInitTime() {
+		return ++this.shared.lastInitTime;
+	}
+	getSharedItems(path) {
+		this.shared = path.shared;
+		if (typeof this.initTime == "undefined")
+			this.initTime = ++this.shared.lastInitTime;
 	}
 }
 

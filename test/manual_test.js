@@ -57,11 +57,11 @@ myObj.se.add(myObj.se);
 // myObj.cc  = myObj;
 // myObj.oo.c = myObj.o;
 
-// sym = Symbol("test");
-// myObj = Object(sym);
-// myObj.s = sym;
-// myObj.s2 = Symbol("test2");
-// myObj = { sym: myObj, sym2: myObj.s2 };
+sym = Symbol("test");
+myObj = Object(sym);
+myObj.s = sym;
+myObj.s2 = Symbol("test2");
+myObj = { sym: myObj, sym2: myObj.s2 };
 
 // myObj = [1, 2, 3];
 // myObj.x = 1;
