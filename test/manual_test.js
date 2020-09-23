@@ -76,6 +76,25 @@ myObj = { sym: myObj, sym2: myObj.s2 };
 // myObj[true] = "4";
 // myObj.x = 1;
 // myObj.c = myObj;
+class c{};
+
+class b extends c{
+	constructor(){super();}
+}
+
+// b = function(){};
+
+b.prototype.z =1;
+
+class a extends b{
+	constructor() {super();}
+}
+myObj = a;
+
+// f= function(){};
+// o={};
+// myObj = f.bind(o);
+
 
 var script = json_scriptify(myObj);
 

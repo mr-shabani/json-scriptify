@@ -22,10 +22,10 @@ var isEmptyObject = function(obj) {
 	if (Object.getOwnPropertySymbols(obj).length > 0) return false;
 	return true;
 };
-var objectHasOnly = function(obj, props) {
+var objectIsSame = function(obj, props) {
 	if (typeof obj != "object") return false;
 	if (Object.is(obj, null)) return false;
-	if (obj.__proto__ !== Object.prototype) return false;
+	if (obj.__proto__ !== props.__proto__) return false;
 	if (Object.getOwnPropertyNames(obj).some(key => obj[key] != props[key]))
 		return false;
 	if (Object.getOwnPropertySymbols(obj).some(key => obj[key] != props[key]))
@@ -81,7 +81,7 @@ var insertBetween = function(arr, val) {
 module.exports = {
 	isInstanceOf,
 	getSameProperties,
-	objectHasOnly,
+	objectIsSame,
 	PathClass,
 	cleanKey,
 	insertBetween,

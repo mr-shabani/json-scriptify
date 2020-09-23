@@ -1,9 +1,10 @@
 var {
-	objectHasOnly,
+	objectIsSame,
 	getSameProperties,
 	cleanKey,
 	insertBetween,
-	ExpressionClass
+	ExpressionClass,
+	PathClass
 } = require("./helper");
 var makeExpression = ExpressionClass.prototype.makeExpression;
 
@@ -98,11 +99,52 @@ var classes = [
 	},
 	{
 		type: Function,
-		toScript: function(obj) {
-			this.ignoreProperties = getSameProperties(obj, obj.toString());
-			if (objectHasOnly(obj.prototype, { constructor: obj }))
-				this.ignoreProperties.push("prototype");
-			return obj.toString();
+		toScript: function(obj, getScript, path) {
+			var scriptArray;
+			let stringOfObj = obj.toString();
+			if (/\{\s*\[native code]\s*}/.test(stringOfObj)) {
+				throw new TypeError("native code functions cannot be scriptified!");
+			}
+			let classRegexp = /^class\s+(?:[a-zA-Z_]+\w*)(?:\s+extends\s+(?<parentName>[a-zA-Z_]+\w*))*/;
+			let matchForClassRegexp = classRegexp.exec(stringOfObj);
+			if (matchForClassRegexp) {
+				let parentName = matchForClassRegexp.groups.parentName;
+				scriptArray = this.classToScript(obj, getScript, path, parentName);
+			} else scriptArray = [stringOfObj];
+
+			if (obj.prototype) {
+				let default_prototype = { constructor: obj };
+				default_prototype.__proto__ = obj.prototype.__proto__;
+				if (!objectIsSame(obj.prototype, default_prototype)) {
+					let prototypePath = path.addWithNewInitTime("prototype");
+					let prototypeScript = getScript(obj.prototype, prototypePath);
+					scriptArray.push(
+						makeExpression(
+							"Object.assign(",
+							prototypePath,
+							",",
+							prototypeScript.popInit(),
+							")"
+						),
+						prototypeScript
+					);
+				}
+			}
+			this.ignoreProperties = getSameProperties(obj, scriptArray[0]);
+			this.ignoreProperties.push("prototype");
+			return scriptArray;
+		},
+		classToScript: function(obj, getScript, path, parentName) {
+			let scriptArray = [];
+			if (parentName) {
+				let parentClassPath = path.add("__proto__");
+				let parentScript = getScript(obj.__proto__, parentClassPath);
+				scriptArray.push(
+					`(function(){\n  ${parentName}=${parentScript.popInit()};\n  return ${obj.toString()};\n  })()`,
+					parentScript
+				);
+			} else scriptArray.push(`(function(){\n    return ${obj.toString()};\n  })()`);
+			return scriptArray;
 		}
 	},
 	{
