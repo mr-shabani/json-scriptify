@@ -1,5 +1,6 @@
 var PathClass = require("./PathClass");
 var { makeFlat, ExpressionClass } = require("./ExpressionClass");
+var classToScript = require("./classToScript");
 
 var cleanKey = function(keyText) {
 	if (String(parseInt(keyText)) == keyText && keyText != "NaN")
@@ -86,5 +87,6 @@ module.exports = {
 	cleanKey,
 	insertBetween,
 	makeFlat,
-	ExpressionClass
+	ExpressionClass,
+	classToScript
 };

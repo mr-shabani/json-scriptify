@@ -4,7 +4,7 @@ var {
 	cleanKey,
 	insertBetween,
 	ExpressionClass,
-	PathClass
+	classToScript
 } = require("./helper");
 var makeExpression = ExpressionClass.prototype.makeExpression;
 
@@ -102,14 +102,11 @@ var classes = [
 		toScript: function(obj, getScript, path) {
 			var scriptArray;
 			let stringOfObj = obj.toString();
-			if (/\{\s*\[native code]\s*}/.test(stringOfObj)) {
+			if (/\{\s*\[native code]\s*}$/.test(stringOfObj)) {
 				throw new TypeError("native code functions cannot be scriptified!");
 			}
-			let classRegexp = /^class\s+(?:[a-zA-Z_]+\w*)(?:\s+extends\s+(?<parentName>[a-zA-Z_]+\w*))*/;
-			let matchForClassRegexp = classRegexp.exec(stringOfObj);
-			if (matchForClassRegexp) {
-				let parentName = matchForClassRegexp.groups.parentName;
-				scriptArray = this.classToScript(obj, getScript, path, parentName);
+			if (stringOfObj.startsWith("class")) {
+				scriptArray = classToScript(obj, getScript, path, makeExpression);
 			} else scriptArray = [stringOfObj];
 
 			if (obj.prototype) {
@@ -130,20 +127,12 @@ var classes = [
 					);
 				}
 			}
-			this.ignoreProperties = getSameProperties(obj, scriptArray[0]);
+			try {
+				this.ignoreProperties = getSameProperties(obj, scriptArray[0]);
+			} catch (e) {
+				this.ignoreProperties = [];
+			}
 			this.ignoreProperties.push("prototype");
-			return scriptArray;
-		},
-		classToScript: function(obj, getScript, path, parentName) {
-			let scriptArray = [];
-			if (parentName) {
-				let parentClassPath = path.add("__proto__");
-				let parentScript = getScript(obj.__proto__, parentClassPath);
-				scriptArray.push(
-					`(function(){\n  ${parentName}=${parentScript.popInit()};\n  return ${obj.toString()};\n  })()`,
-					parentScript
-				);
-			} else scriptArray.push(`(function(){\n    return ${obj.toString()};\n  })()`);
 			return scriptArray;
 		}
 	},

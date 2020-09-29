@@ -29,7 +29,8 @@ var myObj = {
 	n: NaN,
 	nu: null,
 	inf: Infinity,
-	u: undefined
+	u: undefined,
+	class: class a {}
 };
 
 myObj.c = myObj;
@@ -38,6 +39,11 @@ myObj.o.c = myObj.oo.o;
 myObj.m.set(myObj.m, myObj);
 myObj.se.add(myObj.m);
 myObj.se.add(myObj.se);
+myObj.inheritClass = class b extends myObj.class {
+	constructor() {
+		super();
+	}
+};
 
 // sym = Symbol("test");
 // myObj = sym;
@@ -57,11 +63,11 @@ myObj.se.add(myObj.se);
 // myObj.cc  = myObj;
 // myObj.oo.c = myObj.o;
 
-sym = Symbol("test");
-myObj = Object(sym);
-myObj.s = sym;
-myObj.s2 = Symbol("test2");
-myObj = { sym: myObj, sym2: myObj.s2 };
+// sym = Symbol("test");
+// myObj = Object(sym);
+// myObj.s = sym;
+// myObj.s2 = Symbol("test2");
+// myObj = { sym: myObj, sym2: myObj.s2 };
 
 // myObj = [1, 2, 3];
 // myObj.x = 1;
@@ -76,25 +82,34 @@ myObj = { sym: myObj, sym2: myObj.s2 };
 // myObj[true] = "4";
 // myObj.x = 1;
 // myObj.c = myObj;
-class c{};
+// class c {}
 
-class b extends c{
-	constructor(){super();}
-}
+// c.f = c;
 
-// b = function(){};
+// class b extends c {
+// 	constructor() {
+// 		super();
+// 	}
+// }
 
-b.prototype.z =1;
+// b = function() {};
 
-class a extends b{
-	constructor() {super();}
-}
-myObj = a;
+// b.prototype.z = 1;
+
+// class a extends b {
+// 	constructor() {
+// 		super();
+// 	}
+// }
+// myObj = c;
+
+// o = {c:class a extends b{}}
+// o.x = class b extends o.c {};
+// myObj = o;
 
 // f= function(){};
 // o={};
 // myObj = f.bind(o);
-
 
 var script = json_scriptify(myObj);
 
