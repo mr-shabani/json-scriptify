@@ -98,6 +98,62 @@ var classes = [
 		}
 	},
 	{
+		type: SyntaxError,
+		toScript: function(obj) {
+			let script = `new SyntaxError(${JSON.stringify(obj.message)})`;
+			this.ignoreProperties = getSameProperties(obj, script);
+			return script;
+		}
+	},
+	{
+		type: ReferenceError,
+		toScript: function(obj) {
+			let script = `new ReferenceError(${JSON.stringify(obj.message)})`;
+			this.ignoreProperties = getSameProperties(obj, script);
+			return script;
+		}
+	},
+	{
+		type: RangeError,
+		toScript: function(obj) {
+			let script = `new RangeError(${JSON.stringify(obj.message)})`;
+			this.ignoreProperties = getSameProperties(obj, script);
+			return script;
+		}
+	},
+	{
+		type: EvalError,
+		toScript: function(obj) {
+			let script = `new EvalError(${JSON.stringify(obj.message)})`;
+			this.ignoreProperties = getSameProperties(obj, script);
+			return script;
+		}
+	},
+	{
+		type: URIError,
+		toScript: function(obj) {
+			let script = `new URIError(${JSON.stringify(obj.message)})`;
+			this.ignoreProperties = getSameProperties(obj, script);
+			return script;
+		}
+	},
+	{
+		type: TypeError,
+		toScript: function(obj) {
+			let script = `new TypeError(${JSON.stringify(obj.message)})`;
+			this.ignoreProperties = getSameProperties(obj, script);
+			return script;
+		}
+	},
+	{   // this type must be after other Error types
+		type: Error,
+		toScript: function(obj) {
+			let script = `new Error(${JSON.stringify(obj.message)})`;
+			this.ignoreProperties = getSameProperties(obj, script);
+			return script;
+		}
+	},
+	{
 		type: Function,
 		toScript: function(obj, getScript, path) {
 			var scriptArray;
