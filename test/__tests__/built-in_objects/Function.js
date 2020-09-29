@@ -18,3 +18,11 @@ test("function with properties", function() {
 	expect(checkFor(obj)).toEqual(true);
 	expect(checkFor({ f: obj })).toEqual(true);
 });
+
+test("Generator function", function() {
+	var obj = function* (){yield 1;};
+	obj.x = 1;
+	obj.f = obj;
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ f: obj })).toEqual(true);
+});
