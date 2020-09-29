@@ -97,6 +97,7 @@ class ScriptClass {
 			Object.getOwnPropertySymbols(obj)
 		);
 
+
 		var propertiesWithDescriptionOf = {};
 
 		const descriptionList = ["enumerable", "writable", "configurable"];
@@ -159,10 +160,10 @@ class ScriptClass {
 				if (propertiesWithDescriptionOf[descriptionsText].length < 3) {
 					propertiesWithDescriptionOf[descriptionsText].forEach(
 						([key, value]) => {
-							if (typeof key == "symbol") key = this.getScript(key)[0];
-							else key = JSON.stringify(key);
 							let valuePath = this.path.addWithNewInitTime(key);
 							let valueScript = this.getScript(value, valuePath);
+							if (typeof key == "symbol") key = this.getScript(key);
+							else key = JSON.stringify(key);
 							this.addExpression([
 								makeExpression(
 									"Object.defineProperty(",

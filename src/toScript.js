@@ -1,9 +1,10 @@
 var {
-	objectHasOnly,
+	objectIsSame,
 	getSameProperties,
 	cleanKey,
 	insertBetween,
-	ExpressionClass
+	ExpressionClass,
+	classToScript
 } = require("./helper");
 var makeExpression = ExpressionClass.prototype.makeExpression;
 
@@ -98,11 +99,41 @@ var classes = [
 	},
 	{
 		type: Function,
-		toScript: function(obj) {
-			this.ignoreProperties = getSameProperties(obj, obj.toString());
-			if (objectHasOnly(obj.prototype, { constructor: obj }))
-				this.ignoreProperties.push("prototype");
-			return obj.toString();
+		toScript: function(obj, getScript, path) {
+			var scriptArray;
+			let stringOfObj = obj.toString();
+			if (/\{\s*\[native code]\s*}$/.test(stringOfObj)) {
+				throw new TypeError("native code functions cannot be scriptified!");
+			}
+			if (stringOfObj.startsWith("class")) {
+				scriptArray = classToScript(obj, getScript, path, makeExpression);
+			} else scriptArray = [stringOfObj];
+
+			if (obj.prototype) {
+				let default_prototype = { constructor: obj };
+				default_prototype.__proto__ = obj.prototype.__proto__;
+				if (!objectIsSame(obj.prototype, default_prototype)) {
+					let prototypePath = path.addWithNewInitTime("prototype");
+					let prototypeScript = getScript(obj.prototype, prototypePath);
+					scriptArray.push(
+						makeExpression(
+							"Object.assign(",
+							prototypePath,
+							",",
+							prototypeScript.popInit(),
+							")"
+						),
+						prototypeScript
+					);
+				}
+			}
+			try {
+				this.ignoreProperties = getSameProperties(obj, scriptArray[0]);
+			} catch (e) {
+				this.ignoreProperties = [];
+			}
+			this.ignoreProperties.push("prototype");
+			return scriptArray;
 		}
 	},
 	{
