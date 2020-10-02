@@ -61,6 +61,12 @@ classes = [
 		toPlainObject: function(buff) {
 			return Array.from(new Uint8Array(buff));
 		}
+	},
+	{
+		type: SharedArrayBuffer,
+		toPlainObject: function(buff) {
+			return Array.from(new Uint8Array(buff));
+		}
 	}
 ];
 

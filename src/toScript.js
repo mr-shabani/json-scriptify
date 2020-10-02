@@ -142,7 +142,11 @@ var classes = [
 			Uint16Array,
 			Int16Array,
 			Uint32Array,
-			Int32Array
+			Int32Array,
+			Float32Array,
+			Float64Array,
+			BigInt64Array,
+			BigUint64Array
 		],
 		toScript: function(obj, getScript, path) {
 			let TypedArrayName = Object.getPrototypeOf(obj).constructor.name;
@@ -177,7 +181,32 @@ var classes = [
 			let allZeroRegExp = /^0*$/;
 			if (allZeroRegExp.test(content))
 				return `new ArrayBuffer(${obj.byteLength})`;
-			return `Uint8Array.from("${content}".match(/../g),(s)=>parseInt(s,16)).buffer`;
+			return `Uint8Array.from("${content}".match(/../g),v=>parseInt(v,16)).buffer`;
+		}
+	},
+	{
+		type: SharedArrayBuffer,
+		toScript: function(obj, getScript, path) {
+			let uint8 = new Uint8Array(obj);
+			let content = "";
+			uint8.forEach(v => {
+				content += (v < 16 ? "0" : "") + v.toString(16);
+			});
+			let allZeroRegExp = /^0*$/;
+			if (allZeroRegExp.test(content))
+				return `new SharedArrayBuffer(${obj.byteLength})`;
+			let newPath = path.newPath();
+			return {
+				init: `new SharedArrayBuffer(${obj.byteLength})`,
+				add: [
+					makeExpression(newPath, "= new Uint8Array(", path, ")"),
+					makeExpression(
+						`"${content}".match(/../g).map(v=>parseInt(v,16)).forEach((v,i)=>{`,
+						newPath,
+						"[i]=v;})"
+					)
+				]
+			};
 		}
 	},
 	{

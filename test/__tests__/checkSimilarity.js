@@ -230,3 +230,18 @@ test("TypedArray classes", function() {
 	u2 = new Uint8Array(obj2,2,4);
 	expect(checkSimilarity(u1, u2)).toEqual(true);
 });
+
+test("SharedArrayBuffer class", function() {
+	let obj1 = new SharedArrayBuffer(10);
+	let u1 = new Uint8Array(obj1);
+	let obj2 = new SharedArrayBuffer(4);
+	expect(checkSimilarity(obj1, obj2)).toEqual(false);
+	obj2 = new SharedArrayBuffer(10);
+	let u2 = new Uint8Array(obj2);
+	expect(checkSimilarity(obj1, obj2)).toEqual(true);
+	expect(checkSimilarity(obj2, obj1)).toEqual(true);
+	u1[2]=20;
+	expect(checkSimilarity(obj2, obj1)).toEqual(false);
+	u2[2]=20;
+	expect(checkSimilarity(obj2, obj1)).toEqual(true);
+});
