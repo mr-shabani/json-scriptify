@@ -34,6 +34,24 @@ classes = [
 		toPlainObject: function(sym) {
 			return sym.valueOf();
 		}
+	},
+	{
+		type: Object.getPrototypeOf(Int8Array),
+		toPlainObject: function(typedArray) {
+			return [
+				typedArray.buffer,
+				typedArray.byteOffset,
+				typedArray.length,
+				typedArray.__proto__.constructor.name
+			];
+		}
+	},
+	{
+		//this type must be after TypedArray
+		type: ArrayBuffer,
+		toPlainObject: function(buff) {
+			return Array.from(new Uint8Array(buff));
+		}
 	}
 ];
 
