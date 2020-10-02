@@ -98,6 +98,118 @@ var classes = [
 		}
 	},
 	{
+		type: [
+			Error,
+			TypeError,
+			EvalError,
+			SyntaxError,
+			URIError,
+			RangeError,
+			ReferenceError
+		],
+		toScript: function(obj) {
+			let ErrorName = Object.getPrototypeOf(obj).constructor.name;
+			let script = `new ${ErrorName}(${JSON.stringify(obj.message)})`;
+			this.ignoreProperties = getSameProperties(obj, script);
+			return script;
+		}
+	},
+	{
+		type: DataView,
+		toScript: function(obj, getScript, path) {
+			let length =
+				obj.byteLength == obj.buffer.byteLength - obj.byteOffset
+					? ""
+					: "," + obj.byteLength;
+			let byteOffset =
+				obj.byteOffset == 0 && length == "" ? "" : "," + obj.byteOffset;
+			return {
+				init: makeExpression(),
+				add: makeExpression(
+					path,
+					"=new DataView(",
+					getScript(obj.buffer),
+					`${byteOffset}${length})`
+				)
+			};
+		}
+	},
+	{
+		type: [
+			Uint8Array,
+			Int8Array,
+			Uint8ClampedArray,
+			Uint16Array,
+			Int16Array,
+			Uint32Array,
+			Int32Array,
+			Float32Array,
+			Float64Array,
+			BigInt64Array,
+			BigUint64Array
+		],
+		toScript: function(obj, getScript, path) {
+			let TypedArrayName = Object.getPrototypeOf(obj).constructor.name;
+			this.ignoreProperties = [...Array(obj.length).keys()].map(String);
+			let length =
+				obj.length * obj.BYTES_PER_ELEMENT ==
+				obj.buffer.byteLength - obj.byteOffset
+					? ""
+					: "," + obj.length;
+			let byteOffset =
+				obj.byteOffset == 0 && length == "" ? "" : "," + obj.byteOffset;
+			return {
+				init: makeExpression(),
+				add: makeExpression(
+					path,
+					`=new ${TypedArrayName}(`,
+					getScript(obj.buffer),
+					`${byteOffset}${length}`,
+					")"
+				)
+			};
+		}
+	},
+	{
+		type: ArrayBuffer,
+		toScript: function(obj) {
+			let uint8 = new Uint8Array(obj);
+			let content = "";
+			uint8.forEach(v => {
+				content += (v < 16 ? "0" : "") + v.toString(16);
+			});
+			let allZeroRegExp = /^0*$/;
+			if (allZeroRegExp.test(content))
+				return `new ArrayBuffer(${obj.byteLength})`;
+			return `Uint8Array.from("${content}".match(/../g),v=>parseInt(v,16)).buffer`;
+		}
+	},
+	{
+		type: SharedArrayBuffer,
+		toScript: function(obj, getScript, path) {
+			let uint8 = new Uint8Array(obj);
+			let content = "";
+			uint8.forEach(v => {
+				content += (v < 16 ? "0" : "") + v.toString(16);
+			});
+			let allZeroRegExp = /^0*$/;
+			if (allZeroRegExp.test(content))
+				return `new SharedArrayBuffer(${obj.byteLength})`;
+			let newPath = path.newPath();
+			return {
+				init: `new SharedArrayBuffer(${obj.byteLength})`,
+				add: [
+					makeExpression(newPath, "= new Uint8Array(", path, ")"),
+					makeExpression(
+						`"${content}".match(/../g).map(v=>parseInt(v,16)).forEach((v,i)=>{`,
+						newPath,
+						"[i]=v;})"
+					)
+				]
+			};
+		}
+	},
+	{
 		type: Function,
 		toScript: function(obj, getScript, path) {
 			var scriptArray;

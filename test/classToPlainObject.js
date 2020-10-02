@@ -34,6 +34,39 @@ classes = [
 		toPlainObject: function(sym) {
 			return sym.valueOf();
 		}
+	},
+	{
+		type: Object.getPrototypeOf(Int8Array),// TypedArray class
+		toPlainObject: function(typedArray) {
+			return [
+				typedArray.buffer,
+				typedArray.byteOffset,
+				typedArray.length,
+				typedArray.__proto__.constructor.name
+			];
+		}
+	},
+	{
+		type: DataView,
+		toPlainObject: function(dataView) {
+			return [
+				dataView.buffer,
+				dataView.byteOffset,
+				dataView.length,
+			];
+		}
+	},
+	{
+		type: ArrayBuffer,
+		toPlainObject: function(buff) {
+			return Array.from(new Uint8Array(buff));
+		}
+	},
+	{
+		type: SharedArrayBuffer,
+		toPlainObject: function(buff) {
+			return Array.from(new Uint8Array(buff));
+		}
 	}
 ];
 

@@ -1,3 +1,4 @@
+"use strict";
 var json_scriptify = require("../");
 var checkSimilarity = require("./object_similarity");
 
@@ -110,6 +111,16 @@ myObj.inheritClass = class b extends myObj.class {
 // f= function(){};
 // o={};
 // myObj = f.bind(o);
+
+let buffer = new SharedArrayBuffer(10);
+let ui = new Uint8Array(buffer);
+ui[0] = 100;
+ui[8] = 234;
+ui[3] = 21;
+// myObj = new DataView(buffer);
+myObj = ui;
+
+// myObj = [new Uint8Array(buffer,3,4),new Int8Array(buffer),new ArrayBuffer(20)];
 
 var script = json_scriptify(myObj);
 

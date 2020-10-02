@@ -12,6 +12,8 @@ var cleanKey = function(keyText) {
 
 var isInstanceOf = function(type, obj) {
 	if (typeof type == "string") return typeof obj == type;
+	if (typeof type == "object" && type instanceof Array)
+		return type.some(t => obj instanceof t);
 	if (obj instanceof type) return true;
 	return false;
 };
