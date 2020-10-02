@@ -29,6 +29,11 @@ class PathClass {
 		if (isSymbol) this.isSymbol = true;
 		if (typeof key != "undefined") this.key = key;
 	}
+	newPath(){
+		let newPath = new PathClass(...arguments);
+		newPath.getSharedItems(this);
+		return newPath;
+	}
 	addWithNewInitTime(key, getScript) {
 		let newPath = this.add(key, getScript);
 		newPath.initTime = ++this.shared.lastInitTime;

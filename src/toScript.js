@@ -98,59 +98,67 @@ var classes = [
 		}
 	},
 	{
-		type: SyntaxError,
+		type: [
+			Error,
+			TypeError,
+			EvalError,
+			SyntaxError,
+			URIError,
+			RangeError,
+			ReferenceError
+		],
 		toScript: function(obj) {
-			let script = `new SyntaxError(${JSON.stringify(obj.message)})`;
+			let ErrorName = Object.getPrototypeOf(obj).constructor.name;
+			let script = `new ${ErrorName}(${JSON.stringify(obj.message)})`;
 			this.ignoreProperties = getSameProperties(obj, script);
 			return script;
 		}
 	},
 	{
-		type: ReferenceError,
-		toScript: function(obj) {
-			let script = `new ReferenceError(${JSON.stringify(obj.message)})`;
-			this.ignoreProperties = getSameProperties(obj, script);
-			return script;
+		type: [
+			Uint8Array,
+			Int8Array,
+			Uint8ClampedArray,
+			Uint16Array,
+			Int16Array,
+			Uint32Array,
+			Int32Array
+		],
+		toScript: function(obj, getScript, path) {
+			let TypedArrayName = Object.getPrototypeOf(obj).constructor.name;
+			this.ignoreProperties = [...Array(obj.length).keys()].map(String);
+			let length =
+				obj.length * obj.BYTES_PER_ELEMENT ==
+				obj.buffer.byteLength - obj.byteOffset
+					? ""
+					: "," + obj.length;
+			let byteOffset =
+				obj.byteOffset == 0 && length == "" ? "" : "," + obj.byteOffset;
+			return {
+				init: makeExpression(),
+				add: makeExpression(
+					path,
+					`=new ${TypedArrayName}(`,
+					getScript(obj.buffer),
+					`${byteOffset}${length}`,
+					")"
+				)
+			};
 		}
 	},
 	{
-		type: RangeError,
+		// this type must be after Typed Array types
+		type: ArrayBuffer,
 		toScript: function(obj) {
-			let script = `new RangeError(${JSON.stringify(obj.message)})`;
-			this.ignoreProperties = getSameProperties(obj, script);
-			return script;
-		}
-	},
-	{
-		type: EvalError,
-		toScript: function(obj) {
-			let script = `new EvalError(${JSON.stringify(obj.message)})`;
-			this.ignoreProperties = getSameProperties(obj, script);
-			return script;
-		}
-	},
-	{
-		type: URIError,
-		toScript: function(obj) {
-			let script = `new URIError(${JSON.stringify(obj.message)})`;
-			this.ignoreProperties = getSameProperties(obj, script);
-			return script;
-		}
-	},
-	{
-		type: TypeError,
-		toScript: function(obj) {
-			let script = `new TypeError(${JSON.stringify(obj.message)})`;
-			this.ignoreProperties = getSameProperties(obj, script);
-			return script;
-		}
-	},
-	{   // this type must be after other Error types
-		type: Error,
-		toScript: function(obj) {
-			let script = `new Error(${JSON.stringify(obj.message)})`;
-			this.ignoreProperties = getSameProperties(obj, script);
-			return script;
+			let uint8 = new Uint8Array(obj);
+			let content = "";
+			uint8.forEach(v => {
+				content += (v < 16 ? "0" : "") + v.toString(16);
+			});
+			let allZeroRegExp = /^0*$/;
+			if (allZeroRegExp.test(content))
+				return `new ArrayBuffer(${obj.byteLength})`;
+			return `Uint8Array.from("${content}".match(/../g),(s)=>parseInt(s,16)).buffer`;
 		}
 	},
 	{
