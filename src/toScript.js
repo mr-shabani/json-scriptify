@@ -115,6 +115,26 @@ var classes = [
 		}
 	},
 	{
+		type: DataView,
+		toScript: function(obj, getScript, path) {
+			let length =
+				obj.byteLength == obj.buffer.byteLength - obj.byteOffset
+					? ""
+					: "," + obj.byteLength;
+			let byteOffset =
+				obj.byteOffset == 0 && length == "" ? "" : "," + obj.byteOffset;
+			return {
+				init: makeExpression(),
+				add: makeExpression(
+					path,
+					"=new DataView(",
+					getScript(obj.buffer),
+					`${byteOffset}${length})`
+				)
+			};
+		}
+	},
+	{
 		type: [
 			Uint8Array,
 			Int8Array,
@@ -147,7 +167,6 @@ var classes = [
 		}
 	},
 	{
-		// this type must be after Typed Array types
 		type: ArrayBuffer,
 		toScript: function(obj) {
 			let uint8 = new Uint8Array(obj);
