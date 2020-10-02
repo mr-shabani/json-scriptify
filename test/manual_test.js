@@ -117,7 +117,7 @@ myObj.inheritClass = class b extends myObj.class {
 // ui[0] = 100;
 // ui[8] = 234;
 // ui[3] = 21;
-// myObj = buffer;
+// myObj = new DataView(buffer);
 
 // myObj = [new Uint8Array(buffer,3,4),new Int8Array(buffer),new ArrayBuffer(20)];
 

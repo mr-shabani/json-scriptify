@@ -36,7 +36,7 @@ classes = [
 		}
 	},
 	{
-		type: Object.getPrototypeOf(Int8Array),
+		type: Object.getPrototypeOf(Int8Array),// TypedArray class
 		toPlainObject: function(typedArray) {
 			return [
 				typedArray.buffer,
@@ -47,7 +47,16 @@ classes = [
 		}
 	},
 	{
-		//this type must be after TypedArray
+		type: DataView,
+		toPlainObject: function(dataView) {
+			return [
+				dataView.buffer,
+				dataView.byteOffset,
+				dataView.length,
+			];
+		}
+	},
+	{
 		type: ArrayBuffer,
 		toPlainObject: function(buff) {
 			return Array.from(new Uint8Array(buff));
