@@ -97,7 +97,6 @@ class ScriptClass {
 			Object.getOwnPropertySymbols(obj)
 		);
 
-
 		var propertiesWithDescriptionOf = {};
 
 		const descriptionList = ["enumerable", "writable", "configurable"];
@@ -155,7 +154,7 @@ class ScriptClass {
 					.map((value, ind) => {
 						if (value == "true") return descriptionList[ind] + ":" + value;
 					})
-					.filter(x => x)
+					.filter(Boolean)
 					.join(",");
 				if (propertiesWithDescriptionOf[descriptionsText].length < 3) {
 					propertiesWithDescriptionOf[descriptionsText].forEach(
@@ -207,8 +206,13 @@ class ScriptClass {
 		return objScript.path;
 	}
 
-	exportAsFunctionCall() {
-		var str = "(function(){//version 1\n";
+	export() {
+		if (
+			this.expressions.length == 1 &&
+			this.expressions[0] instanceof ExpressionClass
+		)
+			return "(" + this.popInit() + ")";
+		var str = "(function(){\n";
 		let rawScript = this.getRawScript();
 		if (!this.parent) {
 			if (this.path.newName() != "_.a") str += ` const _={};\n`;
