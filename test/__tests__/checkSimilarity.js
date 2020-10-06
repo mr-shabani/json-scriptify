@@ -97,9 +97,9 @@ test("object with circular map", function() {
 });
 
 test("object with set", function() {
-	let obj1 = { s: new Set([1, 2, "t"]) };
+	let obj1 = { s: new Set([1, Symbol('2'), "t"]) };
 	obj1.c = obj1;
-	let obj2 = { s: new Set([1, 2]) };
+	let obj2 = { s: new Set([1, Symbol('2')]) };
 	obj2.s.add("t");
 	obj2.c = obj2;
 	expect(checkSimilarity(obj1, obj2)).toEqual(true);

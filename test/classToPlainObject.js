@@ -1,5 +1,11 @@
 classes = [
 	{
+		type: "symbol",
+		toPlainObject: function(sym) {
+			return sym.toString();
+		}
+	},
+	{
 		type: Date,
 		toPlainObject: function(date) {
 			return date.getTime();
@@ -18,9 +24,10 @@ classes = [
 		}
 	},
 	{
+		// comparing two sets is a complex issue. We consider only simple scenarios.
 		type: Set,
 		toPlainObject: function(set) {
-			return Array.from(set).sort();
+			return Array.from(set).sort((a, b) => String(a) < String(b));
 		}
 	},
 	{
@@ -36,7 +43,7 @@ classes = [
 		}
 	},
 	{
-		type: Object.getPrototypeOf(Int8Array),// TypedArray class
+		type: Object.getPrototypeOf(Int8Array), // TypedArray class
 		toPlainObject: function(typedArray) {
 			return [
 				typedArray.buffer,
@@ -49,11 +56,7 @@ classes = [
 	{
 		type: DataView,
 		toPlainObject: function(dataView) {
-			return [
-				dataView.buffer,
-				dataView.byteOffset,
-				dataView.length,
-			];
+			return [dataView.buffer, dataView.byteOffset, dataView.length];
 		}
 	},
 	{

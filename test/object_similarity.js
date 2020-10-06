@@ -1,5 +1,6 @@
 var classToPlainObject = require("./classToPlainObject");
 var typesSimilarityCheck = require("./typesSimilarityCheck");
+var { isInstanceOf } = require("../src/helper");
 
 var checkSimilarity = function(obj1, obj2) {
 	var mark = arguments[2] || new Map();
@@ -21,16 +22,9 @@ var checkSimilarity = function(obj1, obj2) {
 
 	mark.set(obj1, obj2);
 
-	if (typeof obj1 == "symbol" || typeof obj2 == "symbol") {
-		if (typeof obj1 == "symbol" && typeof obj2 == "symbol") {
-			return String(obj1) == String(obj2);
-		}
-		return false;
-	}
-
 	for (let cls of classToPlainObject) {
-		if (obj1 instanceof cls.type || obj2 instanceof cls.type) {
-			if (!(obj1 instanceof cls.type && obj2 instanceof cls.type)) {
+		if (isInstanceOf(cls.type, obj1) || isInstanceOf(cls.type, obj2)) {
+			if (!(isInstanceOf(cls.type, obj1) && isInstanceOf(cls.type, obj2))) {
 				return false;
 			}
 			return checkSimilarity(
@@ -65,7 +59,7 @@ var checkSimilarity = function(obj1, obj2) {
 		var key2 = symbolKeys2[index];
 		returnValue =
 			returnValue &&
-			checkSimilarity([key,descriptor1[key]], [key2,descriptor2[key2]], mark);
+			checkSimilarity([key, descriptor1[key]], [key2, descriptor2[key2]], mark);
 	});
 	return returnValue;
 };
