@@ -4,7 +4,8 @@ var {
 	cleanKey,
 	insertBetween,
 	ExpressionClass,
-	classToScript
+	classToScript,
+	hideKeys
 } = require("./helper");
 var makeExpression = ExpressionClass.prototype.makeExpression;
 
@@ -226,7 +227,13 @@ var classes = [
 				default_prototype.__proto__ = obj.prototype.__proto__;
 				if (!objectIsSame(obj.prototype, default_prototype)) {
 					let prototypePath = path.addWithNewInitTime("prototype");
-					let prototypeScript = getScript(obj.prototype, prototypePath);
+					let prototypeScript;
+					if (obj.prototype.constructor == obj)
+						prototypeScript = getScript(
+							hideKeys(obj.prototype, ["constructor"]),
+							prototypePath
+						);
+					else prototypeScript = getScript(obj.prototype, prototypePath);
 					scriptArray.push(
 						makeExpression(
 							"Object.assign(",
@@ -244,6 +251,7 @@ var classes = [
 			} catch (e) {
 				this.ignoreProperties = [];
 			}
+			if (path.key == obj.name) this.ignoreProperties.push("name");
 			this.ignoreProperties.push("prototype");
 			return scriptArray;
 		}

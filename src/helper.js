@@ -42,6 +42,7 @@ var getSameProperties = function(obj, script) {
 			`);
 	const evaluated_obj = PleaseDoNotUseThisNameThatReservedForScriptifyModule;
 	var sameProperties = Object.getOwnPropertyNames(evaluated_obj).filter(key => {
+		if (["caller", "callee", "arguments"].includes(key)) return false;
 		if (!(isEmptyObject(obj[key]) && isEmptyObject(evaluated_obj[key]))) {
 			if (
 				obj[key] !== evaluated_obj[key] &&
@@ -81,6 +82,19 @@ var insertBetween = function(arr, val) {
 	return newArray;
 };
 
+var hideKeys = function(obj, keys) {
+	handler = {
+		get: function(target, key) {
+			if (keys.includes(key)) return undefined;
+			return Reflect.get(...arguments);
+		},
+		ownKeys: function() {
+			return Reflect.ownKeys(...arguments).filter(key => !keys.includes(key));
+		}
+	};
+	return new Proxy(obj, handler);
+};
+
 module.exports = {
 	isInstanceOf,
 	getSameProperties,
@@ -90,5 +104,6 @@ module.exports = {
 	insertBetween,
 	makeFlat,
 	ExpressionClass,
-	classToScript
+	classToScript,
+	hideKeys
 };
