@@ -2,12 +2,24 @@ var { classes: classesToScript, types: typesToScript } = require("./toScript");
 var { isInstanceOf, PathClass, ExpressionClass } = require("./helper");
 var makeExpression = ExpressionClass.prototype.makeExpression;
 
+/**
+ * create script expressions from object
+ * @class ScriptClass
+ */
 class ScriptClass {
+	/**
+	 * @param {any} obj
+	 * @param {ScriptClass} parent
+	 * @param {PathClass} path
+	 */
 	constructor(obj, parent, path) {
 		this.getScript = this.getScript.bind(this);
+		/** @type {Array.<(string|ExpressionClass|ScriptClass)>} */
 		this.expressions = [];
+		/** @type {ScriptClass} */
 		this.parent = parent;
 		if (parent) {
+			/** @type {Map.<(Object|symbol|function), PathClass>} */
 			this.mark = parent.mark;
 			if (typeof path == "undefined") {
 				this.path = new PathClass();
@@ -80,6 +92,7 @@ class ScriptClass {
 		}
 		this.mark.set(obj, this.path);
 
+		/** @type {Array<string>} keys that must be ignored during makeScriptFromObjectProperties */
 		var ignoreProperties = [];
 		for (let cls of classesToScript) {
 			if (isInstanceOf(cls.type, obj)) {
@@ -92,6 +105,10 @@ class ScriptClass {
 		this.makeScriptFromObjectProperties(obj, ignoreProperties);
 	}
 
+	/**
+	 * @param {any} obj
+	 * @param {Array<string>} ignoreProperties list of properties that must be ignored
+	 */
 	makeScriptFromObjectProperties(obj, ignoreProperties) {
 		var allPropertyKeys = Object.getOwnPropertyNames(obj).concat(
 			Object.getOwnPropertySymbols(obj)
@@ -195,6 +212,13 @@ class ScriptClass {
 		});
 	}
 
+	/**
+	 * if path is presented will return ScriptClass of obj and nothing will be added to this.expressions.
+	 * else, first add expression of object script to this.expressions then return the path of that
+	 * @param {any} obj
+	 * @param {PathClass} [path] the path of obj
+	 * @returns {(ScriptClass|PathClass|ExpressionClass)}
+	 */
 	getScript(obj, path) {
 		let markSize = this.mark.size;
 		let objScript = new ScriptClass(obj, this, path);
@@ -206,6 +230,10 @@ class ScriptClass {
 		return objScript.path;
 	}
 
+	/**
+	 * return a script that when be evaluated produce the same object as original
+	 * @method
+	 */
 	export() {
 		if (
 			this.expressions.length == 1 &&
@@ -224,6 +252,10 @@ class ScriptClass {
 		return str;
 	}
 
+	/**
+	 * join expression of this.expressions and return the script
+	 * @method
+	 */
 	getRawScript() {
 		var script = "";
 		this.expressions.forEach(expr => {
@@ -235,6 +267,10 @@ class ScriptClass {
 		return script;
 	}
 
+	/**
+	 * return initialize expression of object script
+	 * @returns {ExpressionClass}
+	 */
 	popInit() {
 		let init = this.expressions.shift();
 		if (init instanceof ExpressionClass) return init.removeAssignment();
