@@ -11,7 +11,7 @@ var checkSimilarity = function(obj1, obj2) {
 		}
 	}
 
-	typesThatWillBeCheckedLater = ["object", "function", "symbol"];
+	let typesThatWillBeCheckedLater = ["object", "function", "symbol"];
 	if (
 		!typesThatWillBeCheckedLater.includes(typeof obj1) ||
 		!typesThatWillBeCheckedLater.includes(typeof obj2)
@@ -40,7 +40,7 @@ var checkSimilarity = function(obj1, obj2) {
 	var descriptor2 = Object.getOwnPropertyDescriptors(obj2);
 	Object.getOwnPropertyNames(descriptor1).forEach(key => {
 		if (!returnValue) return;
-		if (!descriptor2.hasOwnProperty(key)) {
+		if (!Object.prototype.hasOwnProperty.call(descriptor2,key)) {
 			returnValue = false;
 			return;
 		}

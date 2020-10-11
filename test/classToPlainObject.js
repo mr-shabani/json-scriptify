@@ -1,4 +1,15 @@
-classes = [
+/**
+ * @typedef {Object} classToPlainObject
+ * @property {string|function|function[]} type
+ * @property {function(any):any} toPlainObject Convert a class instance to a plain object
+ *  that contains important data that must be checked for similarity check.
+ */
+
+/**
+ * Array of types and their toPlainObject methods.
+ * @type {classToPlainObject[]}
+ */
+let classes = [
 	{
 		type: "symbol",
 		toPlainObject: function(sym) {
