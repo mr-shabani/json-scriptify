@@ -128,22 +128,30 @@ myObj.inheritClass = class b extends myObj.class {
 // myObj.circular = myObj;
 // myObj.repeated = myObj.date;
 
-myObj = {
-	func: function f() {},
-	sym: Symbol("1"),
-	arr: new ArrayBuffer(4),
-	circular: new Set()
-};
+// myObj = {
+// 	func: function f() {},
+// 	sym: Symbol("1"),
+// 	arr: new ArrayBuffer(4),
+// 	circular: new Set()
+// };
 
-myObj.func.prototype.sym = myObj.sym;
-myObj.circular.add(myObj);
-myObj.circular.add(myObj.sym);
-myObj.circular.add(myObj.func);
-myObj.circular.add(myObj.arr);
-myObj.circular.add(myObj.circular);
+// myObj.func.prototype.sym = myObj.sym;
+// myObj.circular.add(myObj);
+// myObj.circular.add(myObj.sym);
+// myObj.circular.add(myObj.func);
+// myObj.circular.add(myObj.arr);
+// myObj.circular.add(myObj.circular);
 
-let int16 = new Int16Array(myObj.arr);
-int16[0] = 1000;
+// let int16 = new Int16Array(myObj.arr);
+// int16[0] = 1000;
+
+// myObj = {};
+// let current_obj = myObj;
+// for(let i=0;i<2000;++i){
+// 	current_obj.obj = {};
+// 	current_obj = current_obj.obj;
+// }
+myObj = Symbol.replace;
 
 var script = json_scriptify(myObj);
 

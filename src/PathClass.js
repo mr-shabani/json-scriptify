@@ -24,8 +24,7 @@ var numberToAlphabetString = function(num) {
 };
 
 /**
- * @generator
- * @function VariableNameGenerator
+ * @generator VariableNameGenerator
  * @yields {string} the next free variable name
  */
 var VariableNameGenerator = function*() {
@@ -47,7 +46,7 @@ class PathClass {
 		if (parentNode) {
 			/** @type {PathClass} */
 			this.parent = parentNode;
-			/** @type {number} initial time of make expression of this variable */
+			/** @type {number} initial time of making the expression*/
 			this.initTime = parentNode.initTime;
 			/** @type {Object} shared items between all paths */
 			this.shared = parentNode.shared;
@@ -57,9 +56,7 @@ class PathClass {
 		if (typeof key != "undefined")
 			/** @type {string} string of variable name or key */ this.key = key;
 	}
-	/**
-	 * make a new path with the same shared items
-	 */
+	/** make a new path with the same shared items */
 	newPath() {
 		let newPath = new PathClass(...arguments);
 		newPath.getSharedItems(this);
@@ -68,10 +65,8 @@ class PathClass {
 	/**
 	 * make a new path with the same shared items and new init time
 	 * that be child of this path
-	 *
 	 * @param {(string|symbol)} key
 	 * @param {function} getScript
-	 * @method
 	 */
 	addWithNewInitTime(key, getScript) {
 		let newPath = this.add(key, getScript);
@@ -81,10 +76,8 @@ class PathClass {
 	/**
 	 * make a new path with the same shared items
 	 * that be child of this path
-	 *
 	 * @param {(string|symbol)} key
 	 * @param {function} getScript
-	 * @method
 	 */
 	add(key, getScript) {
 		var newPath;
@@ -103,10 +96,8 @@ class PathClass {
 	}
 	/**
 	 * based on isSymbol and keyText generate new path
-	 *
 	 * @param {string} pathText
 	 * @param {string} keyText
-	 * @method
 	 */
 	addToPath(pathText, keyText) {
 		if (this.isSymbol) return pathText + "[" + keyText + "]";
@@ -127,7 +118,6 @@ class PathClass {
 	/**
 	 * check that this path has less initTime
 	 * @param {PathClass} path
-	 * @method
 	 */
 	isBefore(path) {
 		return this.initTime < path.initTime;
@@ -136,7 +126,7 @@ class PathClass {
 		return ++this.shared.lastInitTime;
 	}
 	/**
-	 * copy shared items from path to this
+	 * copy shared items from a path to this
 	 * @param {PathClass} path
 	 */
 	getSharedItems(path) {

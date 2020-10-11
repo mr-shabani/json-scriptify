@@ -3,7 +3,7 @@
  * and that array will be removed from arr.
  *
  * @param {Array} arr Array of expressions
- * @returns {Array} newArray one Array that does not include any array
+ * @returns {Array} newArray One array that does not include any array
  */
 var makeFlat = function(arr) {
 	let newArray = [];
@@ -34,17 +34,11 @@ class ExpressionClass {
 	toString() {
 		return this.expression.join("");
 	}
-	/**
-	 * construct a new Expression class and return it.
-	 * @method
-	 */
+	/** construct a new Expression class and return it. */
 	makeExpression() {
 		return new ExpressionClass(...arguments);
 	}
-	/**
-	 * remove elements and characters before the first '=' character and also itself.
-	 * @method 
-	 */
+	/** remove elements and characters before the first '=' character and also itself. */
 	removeAssignment() {
 		while (this.expression.length > 0) {
 			if (typeof this.expression[0] != "string") {
@@ -65,6 +59,5 @@ class ExpressionClass {
 		return this.expression.length == 0;
 	}
 }
-
 
 module.exports = { makeFlat, ExpressionClass };
