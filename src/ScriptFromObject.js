@@ -1,5 +1,6 @@
 var { classes: classesToScript, types: typesToScript } = require("./toScript");
 var { isInstanceOf, PathClass, ExpressionClass } = require("./helper");
+var predefinedValues = require("./predefinedValues");
 var makeExpression = ExpressionClass.prototype.makeExpression;
 
 /**
@@ -26,9 +27,14 @@ class ScriptClass {
 				this.path.getSharedItems(parent.path);
 			} else this.path = path;
 		} else {
-			this.mark = new Map();
 			this.path = new PathClass("obj");
 			this.path.newSharedItems();
+			this.mark = new Map(
+				predefinedValues.map(([value, script]) => [
+					value,
+					this.path.newPath(script)
+				])
+			);
 		}
 		this.createExpressions(obj);
 	}
