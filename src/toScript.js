@@ -6,10 +6,10 @@ var {
 	insertBetween,
 	ExpressionClass,
 	classToScript,
-	hideKeys
+	hideKeys,
+	innerObject
 } = require("./helper");
 var makeExpression = ExpressionClass.prototype.makeExpression;
-
 
 var classes = [
 	{
@@ -83,7 +83,9 @@ var classes = [
 			return {
 				init: "new Map()",
 				add: makeExpression(
-					getScript(mapContentArray),
+					getScript(
+						new innerObject(mapContentArray.map(x => new innerObject(x)))
+					),
 					".forEach(([k,v])=>{",
 					path,
 					".set(k,v);})"
@@ -101,7 +103,7 @@ var classes = [
 			return {
 				init: "new Set()",
 				add: makeExpression(
-					getScript(setContentArray),
+					getScript(new innerObject(setContentArray)),
 					".forEach((v)=>{",
 					path,
 					".add(v);})"

@@ -109,8 +109,8 @@ var insertBetween = function(arr, val) {
 
 /**
  * make a proxy of obj that hide keys
- * 
- * @param {Object} obj 
+ *
+ * @param {Object} obj
  * @param {Array.<(string|symbol)>} keys list of keys that must be hide
  * @returns {Object} A Proxy of obj
  */
@@ -127,6 +127,20 @@ var hideKeys = function(obj, keys) {
 	return new Proxy(obj, handler);
 };
 
+/**
+ * innerObject class is a wrapper for an object that is not
+ * part of the given object but is produced for making the script.
+ * innerObject instance won't be passed to the replacer function.
+ * For example: when we want to create object properties, we make
+ * an array of [key, value]. This array is not part of the original
+ * object and must not be passed to the replacer function.
+ */
+class innerObject {
+	constructor(obj) {
+		this.value = obj;
+	}
+}
+
 module.exports = {
 	isInstanceOf,
 	getSameProperties,
@@ -137,5 +151,6 @@ module.exports = {
 	makeFlat,
 	ExpressionClass,
 	classToScript,
-	hideKeys
+	hideKeys,
+	innerObject
 };

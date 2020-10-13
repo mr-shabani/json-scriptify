@@ -64,6 +64,7 @@ var variableNameRegexp = "[a-zA-Z_]+\\w*";
 var classNameRegexp = `^class\\s+(?<className>${variableNameRegexp})`;
 var classWithParentNameRegexp = `${classNameRegexp}(?:\\s+extends\\s+(?<parentName>.+))*`;
 var onlyOneVariableNameRegexp = `^(${variableNameRegexp})$`;
+// eslint-disable-next-line no-useless-escape
 var onlyHasMembershipRelationsRegexp = `^(${variableNameRegexp}\.)+(${variableNameRegexp})?$`;
 onlyOneVariableNameRegexp = new RegExp(onlyOneVariableNameRegexp);
 classWithParentNameRegexp = new RegExp(classWithParentNameRegexp);
