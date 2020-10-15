@@ -36,13 +36,31 @@ class ScriptClass {
 			this.path.newSharedItems();
 			this.shared = {
 				mark: new Map(
-					predefinedValues.map(([value, script]) => [
-						value,
-						this.path.newPath(script)
-					])
+					predefinedValues.map(([value, script]) => {
+						let newPath = this.path.newPath(script);
+						newPath.initTime = 0;
+						return [value, newPath];
+					})
 				),
 				options: options
 			};
+			if (options.predefined instanceof Array) {
+				options.predefined.forEach(x => {
+					if (x instanceof Array == false)
+						throw new TypeError("options.predefined must be an array.");
+					if (x.length != 2)
+						throw new TypeError(
+							"Each element of options.predefined must be an array of 2 element."
+						);
+					if (typeof x[0] != "string")
+						throw new TypeError(
+							"options.predefined must be [ ['script text',value] , ... ]."
+						);
+					let newPath = this.path.newPath(x[0]);
+					newPath.initTime = 0;
+					this.shared.mark.set(x[1], newPath);
+				});
+			}
 		}
 		if (obj instanceof innerObject) {
 			obj = obj.value;
