@@ -266,20 +266,21 @@ class ScriptClass {
 	 * @method
 	 */
 	export() {
+		const lineBreak = this.shared.options.lineBreak;
 		if (
 			this.expressions.length == 1 &&
 			this.expressions[0] instanceof ExpressionClass
 		)
 			return "(" + this.popInit() + ")";
-		var str = "(function(){\n";
+		var str = "(function(){" + lineBreak;
 		let rawScript = this.getRawScript();
 		if (!this.parent) {
-			if (this.path.newName() != "_.a") str += ` const _={};\n`;
-			str += ` var ${this.path};\n `;
+			if (this.path.newName() != "_.a") str += "const _={};" + lineBreak;
+			str += `var ${this.path};${lineBreak}`;
 		}
 		str += rawScript;
 		if (this.parent) str += `})()`;
-		else str += `return ${this.path};\n})()`;
+		else str += `return ${this.path};${lineBreak}})()`;
 		return str;
 	}
 
@@ -288,10 +289,11 @@ class ScriptClass {
 	 * @method
 	 */
 	getRawScript() {
+		const lineBreak = this.shared.options.lineBreak;
 		var script = "";
 		this.expressions.forEach(expr => {
 			if (expr instanceof ExpressionClass && expr.isEmpty() == false)
-				script += expr + ";\n ";
+				script += expr + ";" + lineBreak;
 			if (expr instanceof ScriptClass) script += expr.getRawScript();
 			if (typeof expr == "string") script += expr;
 		});

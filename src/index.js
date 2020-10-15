@@ -9,8 +9,15 @@ var ScriptFromObject = require("./ScriptFromObject");
  */
 var scriptify = function(obj, Replacer, options) {
 	options = options || {};
+	options.lineBreak =
+		typeof options.lineBreak == "string" ? options.lineBreak : "\n ";
 	options.replacer = Replacer;
-	var scriptFromObject = new ScriptFromObject(obj,undefined,undefined,options);
+	var scriptFromObject = new ScriptFromObject(
+		obj,
+		undefined,
+		undefined,
+		options
+	);
 
 	const script = scriptFromObject.export(options);
 
