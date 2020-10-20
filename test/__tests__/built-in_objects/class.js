@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 var scriptify = require("../../../");
 var checkSimilarity = require("../../object_similarity");
 
@@ -22,7 +23,9 @@ test("Simple class", function() {
 test("class with inheritance", function() {
 	class a {}
 	var obj = class b extends a {
-		constructor() {}
+		constructor() {
+			super();
+		}
 	};
 	obj.prototype.x = 1;
 	obj.f = obj;
@@ -35,6 +38,23 @@ test("class with inheritance", function() {
 	obj.f = obj;
 	expect(checkFor(obj)).toEqual(true);
 	expect(checkFor({ f: obj })).toEqual(true);
+});
+
+test("class with predefined parent class", function() {
+	let obj = class myExtendedClass extends String {};
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ c: obj })).toEqual(true);
+	let str = String;
+	obj = class myExtendedClass extends str {};
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ c: obj })).toEqual(true);
+	let parentClass = class a {};
+	obj = {
+		a: parentClass
+	};
+	obj.b = class myExtendedClass extends obj.a {};
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ c: obj })).toEqual(true);
 });
 
 test("class with multi inheritance", function() {
@@ -56,9 +76,11 @@ test("class with multi inheritance", function() {
 });
 
 test("class with membership in inheritance name", function() {
-	var o = {c:class a {}}
+	var o = { c: class a {} };
 	var obj = class b extends o.c {
-		constructor() {}
+		constructor() {
+			super();
+		}
 	};
 	obj.prototype.x = 1;
 	obj.f = obj;
@@ -66,12 +88,13 @@ test("class with membership in inheritance name", function() {
 	expect(checkFor({ f: obj })).toEqual(true);
 });
 
-
 test("class with complex name for inheritance", function() {
 	var objConstructor = function() {
 		o = { getClass: () => class a {} };
 		var obj = class b extends o.getClass() {
-			constructor() {}
+			constructor() {
+				super();
+			}
 		};
 		obj.prototype.x = 1;
 		obj.f = obj;
@@ -80,7 +103,9 @@ test("class with complex name for inheritance", function() {
 	var obj2Constructor = function() {
 		p = class a {};
 		var obj2 = class b extends p {
-			constructor() {}
+			constructor() {
+				super();
+			}
 		};
 		obj2.prototype.x = 1;
 		obj2.f = obj2;

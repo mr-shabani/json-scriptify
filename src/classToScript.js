@@ -83,39 +83,40 @@ var classExpressionAnalyze = function(code) {
 	let tokenIndexesMap = tokenize(code);
 	let classBodyLastIndex = code.lastIndexOf("}");
 	let classBodyFirstIndex = tokenIndexesMap.get(classBodyLastIndex);
-	var { className, parentName } = code
+	var { parentName } = code
 		.substr(0, classBodyFirstIndex)
 		.match(classWithParentNameRegexp).groups;
 	let parentScriptConstructor = null;
 	if (parentName) {
 		let parentNameIndex = classBodyFirstIndex - parentName.length;
 		parentName = parentName.trim();
-		parentScriptConstructor = parentScript =>
-			`let ${parentName}=${parentScript};\n`;
+		parentScriptConstructor = parentScript => ({
+			argumentVariable: parentName,
+			argumentScript: parentScript
+		});
 		if (onlyOneVariableNameRegexp.test(parentName) == false) {
 			if (onlyHasMembershipRelationsRegexp.test(parentName)) {
 				let parentNameArray = parentName.split(".");
 				let firstName = parentNameArray.shift();
 				let endBraces = parentNameArray.map(() => "}").join("");
-				parentScriptConstructor = parentScript =>
-					"let " +
-					firstName +
-					"={" +
-					parentNameArray.join(":{") +
-					":" +
-					parentScript +
-					endBraces +
-					";\n";
+				parentScriptConstructor = parentScript => ({
+					argumentVariable: firstName,
+					argumentScript:
+						"{" + parentNameArray.join(":{") + ":" + parentScript + endBraces
+				});
 			} else {
 				code =
 					code.substr(0, parentNameIndex) +
 					"p" +
 					code.substr(classBodyFirstIndex - 1);
-				parentScriptConstructor = parentScript => `let p=${parentScript};\n`;
+				parentScriptConstructor = parentScript => ({
+					argumentVariable: "p",
+					argumentScript: parentScript
+				});
 			}
 		}
 	}
-	return [className, parentScriptConstructor, code];
+	return [parentName, parentScriptConstructor, code];
 };
 
 /**
@@ -124,19 +125,18 @@ var classExpressionAnalyze = function(code) {
  * @class
  */
 
-
 /**
  * make script of class object
- * 
- * @param {class} obj 
- * @param {function} getScript 
- * @param {ClassPath} path 
- * @param {function} makeExpression 
- * @returns {Array.<(ExpressionClass|String|ScriptClass)>} 
+ *
+ * @param {class} obj
+ * @param {function} getScript
+ * @param {ClassPath} path
+ * @param {function} makeExpression
+ * @returns {Array.<(ExpressionClass|String|ScriptClass)>}
  */
 var classToScript = function(obj, getScript, path, makeExpression) {
 	let stringOfObj = obj.toString();
-	let [, parentConstructor, code] = classExpressionAnalyze(
+	let [parentName, parentConstructor, code] = classExpressionAnalyze(
 		stringOfObj
 	);
 	let scriptArray = [];
@@ -148,14 +148,18 @@ var classToScript = function(obj, getScript, path, makeExpression) {
 			scriptArray.push(makeExpression());
 			parentInitScript = parentScript.popInit();
 		}
-		scriptArray.push(
-			`(function(){\n  ${parentConstructor(
+		if (parentName == parentInitScript)
+			scriptArray.push(`(function(){\n return ${code};\n })()`, parentScript);
+		else {
+			let { argumentVariable, argumentScript } = parentConstructor(
 				parentInitScript
-			)}  return ${code};\n  })()`,
-			parentScript
-		);
-	} else
-		scriptArray.push(`(function(){\n    return ${obj.toString()};\n  })()`);
+			);
+			scriptArray.push(
+				`(function(${argumentVariable}){\n  return ${code};\n })(${argumentScript})`,
+				parentScript
+			);
+		}
+	} else scriptArray.push(`(function(){\n  return ${obj.toString()};\n })()`);
 	return scriptArray;
 };
 
