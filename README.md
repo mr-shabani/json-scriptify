@@ -4,9 +4,11 @@
 
 The main goal of this module is to produce a readable and minimum length script from an object that when be evaluated, returns an object as same as possible to the original object.
 
+<div style="border:1px solid black;padding:.1em 2em;margin:0px 2em">
 <span style="font-size: 1.3em;color: orange">&#9888;&#65039;</span>
-	CAUTION: We have not implemented a safe parser. So, Don't use this module to send information over the internet.
-	This module is designed for use in a babel-plugin and also can be used in the backend or for saving objects.
+CAUTION: We have not implemented a safe parser. So, Don't use this module to send information over the internet.
+This module is designed for use in a babel-plugin and also can be used in the backend or for saving objects.
+</div>
 
 ## Features
 
@@ -47,6 +49,17 @@ npm install json-scriptify
 ```
 
 ## Usage
+
+```javascript
+var scriptify = require("json-scriptify");
+
+let scriptString = scriptify(object, Replacer, options);
+```
+
+`Replacer` is a function from any object to any object.
+
+`options` is a object that can contain `lineBreak` and `predefined` keys.
+By default,`lineBreak` is "\n ".
 
 ### Simple object with circular
 
@@ -116,6 +129,60 @@ console.log(script);
 ```
 
 Albeit, the size of this script can be less, maybe at later versions.
+
+### Replacer
+
+usage of `Replacer` is like as `JSON.stringify` Replacer. But without `key` and `this`. Only the `value` that we want to produce script of it, will be passed to `Replacer`.
+
+```javascript
+let scriptify = require("json-scriptify");
+
+let obj = { num: 1, str: "string", date: new Date(), re: /any regex/g };
+
+let Replacer = function(value) {
+	if (typeof value == "object") return;
+	return value;
+};
+
+var script = scriptify(obj);
+
+console.log(script);
+// ({num:1,str:"string",date:undefined,re:undefined})
+```
+
+### predefined values
+
+We defined some predefined values in [`predefinedValues.js`]() file. Until now, we only add global functions such as `Map`, `eval`, or `String` and symbols in the `Symbol` object such as `Symbol.iterator`.
+
+You can add your predefined values in `options.predefined`.
+
+```javascript
+options = {predefined:[ ["script1",value1],["script2",value2], ... ]}
+```
+
+#### example
+
+```javascript
+let scriptify = require("json-scriptify");
+
+let parentClass = class a {};
+let obj = class myExtendedClass extends parentClass {};
+
+var script = scriptify(obj, { predefined: [["parentClass", parentClass]] });
+
+console.log(script);
+/*
+(function(){
+ var obj;
+ obj=(function(){
+ return class myExtendedClass extends parentClass {};
+ })();
+ Object.defineProperty(obj,"length",{value:0,configurable:true});
+ Object.defineProperty(obj,"name",{value:"myExtendedClass",configurable:true});
+ return obj;
+ })()
+*/
+```
 
 ## License
 
