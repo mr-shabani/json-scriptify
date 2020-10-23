@@ -97,9 +97,9 @@ test("object with circular map", function() {
 });
 
 test("object with set", function() {
-	let obj1 = { s: new Set([1, 2, "t"]) };
+	let obj1 = { s: new Set([1, Symbol('2'), "t"]) };
 	obj1.c = obj1;
-	let obj2 = { s: new Set([1, 2]) };
+	let obj2 = { s: new Set([1, Symbol('2')]) };
 	obj2.s.add("t");
 	obj2.c = obj2;
 	expect(checkSimilarity(obj1, obj2)).toEqual(true);
@@ -191,5 +191,57 @@ test("Boolean classes", function() {
 	obj1.x = 1;
 	expect(checkSimilarity(obj2, obj1)).toEqual(false);
 	obj2.x = 1;
+	expect(checkSimilarity(obj2, obj1)).toEqual(true);
+});
+
+test("ArrayBuffer class", function() {
+	let obj1 = new ArrayBuffer(10);
+	let u1 = new Uint8Array(obj1);
+	let obj2 = new ArrayBuffer(4);
+	expect(checkSimilarity(obj1, obj2)).toEqual(false);
+	obj2 = new ArrayBuffer(10);
+	let u2 = new Uint8Array(obj2);
+	expect(checkSimilarity(obj1, obj2)).toEqual(true);
+	expect(checkSimilarity(obj2, obj1)).toEqual(true);
+	u1[2]=20;
+	expect(checkSimilarity(obj2, obj1)).toEqual(false);
+	u2[2]=20;
+	expect(checkSimilarity(obj2, obj1)).toEqual(true);
+});
+
+test("TypedArray classes", function() {
+	let obj1 = new ArrayBuffer(10);
+	let u1 = new Uint8Array(obj1);
+	let obj2 = new ArrayBuffer(4);
+	let u2 = new Uint8Array(obj2);
+	expect(checkSimilarity(u1, u2)).toEqual(false);
+	obj2 = new ArrayBuffer(10);
+	u2 = new Uint8Array(obj2);
+	expect(checkSimilarity(u1, u2)).toEqual(true);
+	expect(checkSimilarity(u2, u1)).toEqual(true);
+	u1[2]=20;
+	expect(checkSimilarity(u1, u2)).toEqual(false);
+	u2[2]=20;
+	expect(checkSimilarity(u1, u2)).toEqual(true);
+	u1 = new Uint8Array(obj1,2,4);
+	expect(checkSimilarity(u1, u2)).toEqual(false);
+	u2 = new Uint8Array(obj2,2,3);
+	expect(checkSimilarity(u1, u2)).toEqual(false);
+	u2 = new Uint8Array(obj2,2,4);
+	expect(checkSimilarity(u1, u2)).toEqual(true);
+});
+
+test("SharedArrayBuffer class", function() {
+	let obj1 = new SharedArrayBuffer(10);
+	let u1 = new Uint8Array(obj1);
+	let obj2 = new SharedArrayBuffer(4);
+	expect(checkSimilarity(obj1, obj2)).toEqual(false);
+	obj2 = new SharedArrayBuffer(10);
+	let u2 = new Uint8Array(obj2);
+	expect(checkSimilarity(obj1, obj2)).toEqual(true);
+	expect(checkSimilarity(obj2, obj1)).toEqual(true);
+	u1[2]=20;
+	expect(checkSimilarity(obj2, obj1)).toEqual(false);
+	u2[2]=20;
 	expect(checkSimilarity(obj2, obj1)).toEqual(true);
 });

@@ -1,9 +1,13 @@
+/* eslint-disable no-undef */
 var {
-	objectHasOnly,
+	objectIsSame,
 	getSameProperties,
 	cleanKey,
 	insertBetween,
-	ExpressionClass
+	ExpressionClass,
+	classToScript,
+	hideKeys,
+	innerObject
 } = require("./helper");
 var makeExpression = ExpressionClass.prototype.makeExpression;
 
@@ -36,15 +40,19 @@ var classes = [
 	{
 		type: String,
 		toScript: function(obj) {
+			/** @type {string[]} object keys that will be ignored in produce script*/
 			this.ignoreProperties = ["length"];
 			for (let i = 0; i < obj.length; ++i)
-				if (obj.hasOwnProperty(i)) this.ignoreProperties.push(i.toString());
+				if (Object.prototype.hasOwnProperty.call(obj, i))
+					this.ignoreProperties.push(i.toString());
 			return `new String(${JSON.stringify(obj)})`;
 		}
 	},
 	{
 		type: Symbol,
 		toScript: function(obj, getScript, path) {
+			/** 'init' expressions will be inserted at the first and
+			 *  'add' expressions will be inserted at the last.*/
 			return {
 				init: makeExpression(),
 				add: makeExpression(path, "=", "Object(", getScript(obj.valueOf()), ")")
@@ -60,6 +68,7 @@ var classes = [
 	{
 		type: RegExp,
 		toScript: function(obj) {
+			/** @type {string[]} object keys that will be ignored in produce script*/
 			this.ignoreProperties = getSameProperties(obj, obj.toString());
 			return obj.toString();
 		}
@@ -69,10 +78,14 @@ var classes = [
 		toScript: function(obj, getScript, path) {
 			let mapContentArray = Array.from(obj);
 			if (mapContentArray.length == 0) return "new Map()";
+			/** 'init' expressions will be inserted at the first and
+			 *  'add' expressions will be inserted at the last.*/
 			return {
 				init: "new Map()",
 				add: makeExpression(
-					getScript(mapContentArray),
+					getScript(
+						new innerObject(mapContentArray.map(x => new innerObject(x)))
+					),
 					".forEach(([k,v])=>{",
 					path,
 					".set(k,v);})"
@@ -85,10 +98,12 @@ var classes = [
 		toScript: function(obj, getScript, path) {
 			let setContentArray = Array.from(obj);
 			if (setContentArray.length == 0) return "new Set()";
+			/** 'init' expressions will be inserted at the first and
+			 *  'add' expressions will be inserted at the last.*/
 			return {
 				init: "new Set()",
 				add: makeExpression(
-					getScript(setContentArray),
+					getScript(new innerObject(setContentArray)),
 					".forEach((v)=>{",
 					path,
 					".add(v);})"
@@ -97,48 +112,211 @@ var classes = [
 		}
 	},
 	{
-		type: Function,
+		type: [
+			Error,
+			TypeError,
+			EvalError,
+			SyntaxError,
+			URIError,
+			RangeError,
+			ReferenceError
+		],
 		toScript: function(obj) {
-			this.ignoreProperties = getSameProperties(obj, obj.toString());
-			if (objectHasOnly(obj.prototype, { constructor: obj }))
-				this.ignoreProperties.push("prototype");
-			return obj.toString();
+			let ErrorName = Object.getPrototypeOf(obj).constructor.name;
+			let script = `new ${ErrorName}(${JSON.stringify(obj.message)})`;
+			/** @type {string[]} object keys that will be ignored in produce script*/
+			this.ignoreProperties = getSameProperties(obj, script);
+			return script;
+		}
+	},
+	{
+		type: DataView,
+		toScript: function(obj, getScript, path) {
+			let length =
+				obj.byteLength == obj.buffer.byteLength - obj.byteOffset
+					? ""
+					: "," + obj.byteLength;
+			let byteOffset =
+				obj.byteOffset == 0 && length == "" ? "" : "," + obj.byteOffset;
+			/** 'init' expressions will be inserted at the first and
+			 *  'add' expressions will be inserted at the last.*/
+			return {
+				init: makeExpression(),
+				add: makeExpression(
+					path,
+					"=new DataView(",
+					getScript(obj.buffer),
+					`${byteOffset}${length})`
+				)
+			};
+		}
+	},
+	{
+		type: [
+			Uint8Array,
+			Int8Array,
+			Uint8ClampedArray,
+			Uint16Array,
+			Int16Array,
+			Uint32Array,
+			Int32Array,
+			Float32Array,
+			Float64Array,
+			BigInt64Array,
+			BigUint64Array
+		],
+		toScript: function(obj, getScript, path) {
+			let TypedArrayName = Object.getPrototypeOf(obj).constructor.name;
+			/** @type {string[]} object keys that will be ignored in produce script*/
+			this.ignoreProperties = [...Array(obj.length).keys()].map(String);
+			let length =
+				obj.length * obj.BYTES_PER_ELEMENT ==
+				obj.buffer.byteLength - obj.byteOffset
+					? ""
+					: "," + obj.length;
+			let byteOffset =
+				obj.byteOffset == 0 && length == "" ? "" : "," + obj.byteOffset;
+			/** 'init' expressions will be inserted at the first and
+			 *  'add' expressions will be inserted at the last.*/
+			return {
+				init: makeExpression(),
+				add: makeExpression(
+					path,
+					`=new ${TypedArrayName}(`,
+					getScript(obj.buffer),
+					`${byteOffset}${length}`,
+					")"
+				)
+			};
+		}
+	},
+	{
+		type: ArrayBuffer,
+		toScript: function(obj) {
+			let uint8 = new Uint8Array(obj);
+			let content = "";
+			uint8.forEach(v => {
+				content += (v < 16 ? "0" : "") + v.toString(16);
+			});
+			let allZeroRegExp = /^0*$/;
+			if (allZeroRegExp.test(content))
+				return `new ArrayBuffer(${obj.byteLength})`;
+			return `Uint8Array.from("${content}".match(/../g),v=>parseInt(v,16)).buffer`;
+		}
+	},
+	{
+		type: SharedArrayBuffer,
+		toScript: function(obj, getScript, path) {
+			let uint8 = new Uint8Array(obj);
+			let content = "";
+			uint8.forEach(v => {
+				content += (v < 16 ? "0" : "") + v.toString(16);
+			});
+			let allZeroRegExp = /^0*$/;
+			if (allZeroRegExp.test(content))
+				return `new SharedArrayBuffer(${obj.byteLength})`;
+			let newPath = path.newPath();
+			/** 'init' expressions will be inserted at the first and
+			 *  'add' expressions will be inserted at the last.*/
+			return {
+				init: `new SharedArrayBuffer(${obj.byteLength})`,
+				add: [
+					makeExpression(newPath, "= new Uint8Array(", path, ")"),
+					makeExpression(
+						`"${content}".match(/../g).map(v=>parseInt(v,16)).forEach((v,i)=>{`,
+						newPath,
+						"[i]=v;})"
+					)
+				]
+			};
+		}
+	},
+	{
+		type: Function,
+		toScript: function(obj, getScript, path) {
+			var scriptArray;
+			let stringOfObj = obj.toString();
+			if (/\{\s*\[native code]\s*}$/.test(stringOfObj)) {
+				throw new TypeError("native code functions cannot be scriptified!");
+			}
+			if (stringOfObj.startsWith("class")) {
+				scriptArray = classToScript(obj, getScript, path, makeExpression);
+			} else scriptArray = [stringOfObj];
+
+			if (obj.prototype) {
+				let default_prototype = { constructor: obj };
+				default_prototype.__proto__ = obj.prototype.__proto__;
+				if (!objectIsSame(obj.prototype, default_prototype)) {
+					let prototypePath = path.addWithNewInitTime("prototype");
+					let prototypeScript;
+					if (obj.prototype.constructor == obj)
+						prototypeScript = getScript(
+							hideKeys(obj.prototype, ["constructor"]),
+							prototypePath
+						);
+					else prototypeScript = getScript(obj.prototype, prototypePath);
+					scriptArray.push(
+						makeExpression(
+							"Object.assign(",
+							prototypePath,
+							",",
+							prototypeScript.popInit(),
+							")"
+						),
+						prototypeScript
+					);
+				}
+			}
+			try {
+				this.ignoreProperties = getSameProperties(obj, scriptArray[0]);
+			} catch (e) {
+				this.ignoreProperties = [];
+			}
+			if (path.key == obj.name) this.ignoreProperties.push("name");
+			this.ignoreProperties.push("prototype");
+			return scriptArray;
 		}
 	},
 	{
 		type: WeakSet,
-		toScript: function(obj, getScript) {
+		toScript: function() {
 			throw new TypeError("WeakSet cannot be scriptify!");
 		}
 	},
 	{
 		type: WeakMap,
-		toScript: function(obj, getScript) {
+		toScript: function() {
 			throw new TypeError("WeakMap cannot be scriptify!");
 		}
 	},
 	{
 		type: Array,
 		toScript: function(obj, getScript, path) {
-			var script = [[]];
+			var initScript = [[]];
+			var addScript = [[]];
 			var lastIndex = -1;
 			var scriptIndex = 0;
+			var initTime = path.initTime;
 			obj.forEach((element, index) => {
 				if (lastIndex != index - 1) {
-					script[++scriptIndex] = `.length = ${index}`;
-					script[++scriptIndex] = [];
+					initScript[++scriptIndex] = `.length = ${index}`;
+					initScript[++scriptIndex] = [];
+					addScript[scriptIndex] = [];
+					initTime = path.getNewInitTime();
 				}
-				let newPath = path.add(index.toString());
-				newPath.initTime += scriptIndex;
-				let elementScript = getScript(element, newPath);
-				if (elementScript.isEmpty()) script[scriptIndex].push("null");
-				else script[scriptIndex].push(elementScript);
+				let indexPath = path.add(index.toString());
+				indexPath.initTime = initTime;
+				let elementScript = getScript(element, indexPath);
+				let elementInit = elementScript.popInit();
+				if (elementInit.isEmpty()) initScript[scriptIndex].push("null");
+				else initScript[scriptIndex].push(elementInit);
+				addScript[scriptIndex].push(elementScript);
 				lastIndex = index;
 			});
 			if (lastIndex + 1 < obj.length)
-				script[++scriptIndex] = `.length = ${obj.length}`;
+				initScript[++scriptIndex] = `.length = ${obj.length}`;
 
-			var scriptArray = script.map((scriptText, index) => {
+			initScript = initScript.map((scriptText, index) => {
 				if (index == 0)
 					return makeExpression(
 						path,
@@ -156,13 +334,15 @@ var classes = [
 				);
 			});
 
+			/** @type {string[]} object keys that will be ignored in produce script*/
 			this.ignoreProperties = ["length"];
 			obj.forEach((element, index) => {
 				this.ignoreProperties.push(index.toString());
 			});
 
 			return {
-				init: scriptArray
+				init: initScript,
+				add: addScript
 			};
 		}
 	},
@@ -170,7 +350,7 @@ var classes = [
 		// This item always must be at the end of the list
 		type: "object",
 		toScript: function(obj, getScript, path) {
-			var entries = Object.entries(obj).filter(([key, value]) => {
+			var entries = Object.entries(obj).filter(([key]) => {
 				var descriptor = Object.getOwnPropertyDescriptor(obj, key);
 				return descriptor.configurable && descriptor.writable;
 			});
@@ -179,20 +359,37 @@ var classes = [
 				getScript(value, path.add(key))
 			]);
 
-			this.ignoreProperties = entries.map(([key, valScript]) => key);
+			/** @type {string[]} object keys that will be ignored in produce script*/
+			this.ignoreProperties = entries.map(([key]) => key);
 
 			let expression = [];
 
 			script.forEach(([key, valScript]) => {
-				if (valScript.isEmpty() == false)
-					expression.push(cleanKey(key), ":", valScript, ",");
+				let initValueScript = valScript.popInit();
+				if (initValueScript.isEmpty() == false)
+					expression.push(cleanKey(key), ":", initValueScript, ",");
 			});
 			expression.pop();
-			return { init: makeExpression(path, "=", "{", expression, "}") };
+			/** 'init' expressions will be inserted at the first and
+			 *  'add' expressions will be inserted at the last.*/
+			return {
+				init: makeExpression(path, "=", "{", expression, "}"),
+				add: script.map(([, valScript]) => valScript)
+			};
 		}
 	}
 ];
 
+/**
+ * @typedef {Object} typeToScript
+ * @property {function(any):boolean} isTypeOf
+ * @property {function(any):string} toScript
+ */
+
+/**
+ * Array of types and their toScript methods.
+ * @type {typeToScript[]}
+ */
 var types = [
 	{
 		isTypeOf: obj => typeof obj == "bigint",
@@ -202,31 +399,31 @@ var types = [
 	},
 	{
 		isTypeOf: obj => Object.is(obj, null),
-		toScript: function(obj) {
+		toScript: function() {
 			return "null";
 		}
 	},
 	{
 		isTypeOf: obj => Object.is(obj, undefined),
-		toScript: function(obj) {
+		toScript: function() {
 			return "undefined";
 		}
 	},
 	{
 		isTypeOf: obj => Object.is(obj, NaN),
-		toScript: function(obj) {
+		toScript: function() {
 			return "NaN";
 		}
 	},
 	{
 		isTypeOf: obj => Object.is(obj, Infinity),
-		toScript: function(obj) {
+		toScript: function() {
 			return "Infinity";
 		}
 	},
 	{
 		isTypeOf: obj => Object.is(obj, -Infinity),
-		toScript: function(obj) {
+		toScript: function() {
 			return "-Infinity";
 		}
 	},

@@ -1,5 +1,12 @@
+/**
+ * if arr  includes any array the content of that array will be inserted in arr
+ * and that array will be removed from arr.
+ *
+ * @param {Array} arr Array of expressions
+ * @returns {Array} newArray One array that does not include any array
+ */
 var makeFlat = function(arr) {
-    let newArray = [];
+	let newArray = [];
 	arr.forEach(element => {
 		if (element instanceof Array) newArray.push(...makeFlat(element));
 		else newArray.push(element);
@@ -7,20 +14,31 @@ var makeFlat = function(arr) {
 	return newArray;
 };
 
+/**
+ * A class to keep one expression elements. It consist an array of expression.
+ * Each element of this array may be also a ExpressionClass instance.
+ * @class
+ */
 class ExpressionClass {
+	/**
+	 * @param {...(string|ExpressionClass)} expression elements
+	 */
 	constructor() {
 		let args = makeFlat([...arguments]).map(x => {
 			if (x instanceof ExpressionClass) return x.expression;
 			return x;
 		});
+		/** @type {Array} array of expression elements */
 		this.expression = makeFlat(args);
 	}
 	toString() {
 		return this.expression.join("");
 	}
+	/** construct a new Expression class and return it. */
 	makeExpression() {
 		return new ExpressionClass(...arguments);
 	}
+	/** remove elements and characters before the first '=' character and also itself. */
 	removeAssignment() {
 		while (this.expression.length > 0) {
 			if (typeof this.expression[0] != "string") {
@@ -36,10 +54,10 @@ class ExpressionClass {
 			}
 		}
 		return this;
-    }
-    isEmpty(){
-        return this.expression.length == 0;
-    }
+	}
+	isEmpty() {
+		return this.expression.length == 0;
+	}
 }
 
 module.exports = { makeFlat, ExpressionClass };

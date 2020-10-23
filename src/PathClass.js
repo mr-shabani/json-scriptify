@@ -1,55 +1,90 @@
-var VariableNameGenerator = function*() {
-	let varName = ["a"];
-	var charCode;
-	var plusPlus = function() {
-		let length = varName.length;
-		var addition = true;
-		for (let i = 0; i < length; ++i) {
-			if (!addition) break;
-			if (varName[i] == "Z") {
-				varName[i] = "a";
-			} else {
-				if (varName[i] == "z") varName[i] = "A";
-				else {
-					charCode = varName[i].charCodeAt(0);
-					varName[i] = String.fromCharCode(charCode + 1);
-				}
-				addition = false;
-			}
-		}
-		if (addition) varName.push("a");
-	};
-	while (true) {
-		yield "_." + varName.join("");
-		plusPlus();
+/**
+ * @type {string[]} array of alphabet characters a-z & A-Z
+ * @constant
+ */
+const alphabet = [];
+for (let ch = "a"; ch <= "z"; ch = String.fromCharCode(ch.charCodeAt(0) + 1))
+	alphabet.push(ch);
+for (let ch = "A"; ch <= "Z"; ch = String.fromCharCode(ch.charCodeAt(0) + 1))
+	alphabet.push(ch);
+
+/**
+ * convert number to string of alphabets
+ * @param {number} num
+ * @returns {string}
+ */
+var numberToAlphabetString = function(num) {
+	let alphabetString = alphabet[num % alphabet.length];
+	num = Math.floor(num / alphabet.length);
+	while (num) {
+		alphabetString += alphabet[num % alphabet.length];
+		num = Math.floor(num / alphabet.length);
 	}
+	return alphabetString;
 };
 
-var varNameGen = VariableNameGenerator();
+/**
+ * @generator VariableNameGenerator
+ * @yields {string} the next free variable name
+ */
+var VariableNameGenerator = function*() {
+	let keyNumber = 0;
+	while (true) yield "_." + numberToAlphabetString(keyNumber++);
+};
 
-var lastInitTime = 0;
-
+/**
+ * class to keep variable name and variable path to main object
+ * @class
+ */
 class PathClass {
+	/**
+	 * @param {string} [key] string of variable name or key
+	 * @param {PathClass} [parentNode] parent variable path that contain this variable
+	 * @param {boolean} [isSymbol] key is symbol or not
+	 */
 	constructor(key, parentNode, isSymbol) {
 		if (parentNode) {
+			/** @type {PathClass} */
 			this.parent = parentNode;
+			/** @type {number} initial time of making the expression*/
 			this.initTime = parentNode.initTime;
-		} else {
-			this.initTime = ++lastInitTime;
+			/** @type {Object} shared items between all paths */
+			this.shared = parentNode.shared;
 		}
-		if (isSymbol) this.isSymbol = true;
-		if (typeof key != "undefined") this.key = key;
+		if (isSymbol)
+			/** type {boolean} key is symbol or not */ this.isSymbol = true;
+		if (typeof key != "undefined")
+			/** @type {string} string of variable name or key */ this.key = key;
 	}
-	addWithNewInitTime(key, getScript) {
-		let newPath = this.add(key, getScript);
-		newPath.initTime = ++lastInitTime;
+	/** make a new path with the same shared items */
+	newPath() {
+		let newPath = new PathClass(...arguments);
+		newPath.getSharedItems(this);
 		return newPath;
 	}
+	/**
+	 * make a new path with the same shared items and new init time
+	 * that be child of this path
+	 * @param {(string|symbol)} key
+	 * @param {function} getScript
+	 */
+	addWithNewInitTime(key, getScript) {
+		let newPath = this.add(key, getScript);
+		newPath.initTime = ++this.shared.lastInitTime;
+		return newPath;
+	}
+	/**
+	 * make a new path with the same shared items
+	 * that be child of this path
+	 * @param {(string|symbol)} key
+	 * @param {function} getScript
+	 */
 	add(key, getScript) {
+		var newPath;
 		if (typeof key == "symbol") {
 			key = getScript(key);
-			var newPath = new PathClass(key, this, true);
-		} else var newPath = new PathClass(key, this);
+			newPath = new PathClass(key, this, true);
+		} else newPath = new PathClass(key, this);
 
 		return newPath;
 	}
@@ -59,6 +94,11 @@ class PathClass {
 		this.key = this.newName();
 		return this.key;
 	}
+	/**
+	 * based on isSymbol and keyText generate new path
+	 * @param {string} pathText
+	 * @param {string} keyText
+	 */
 	addToPath(pathText, keyText) {
 		if (this.isSymbol) return pathText + "[" + keyText + "]";
 		const alphabetCheckRegexp = /^[A-Za-z_]+[A-Za-z0-9_]*$/;
@@ -67,13 +107,32 @@ class PathClass {
 		if (alphabetCheckRegexp.test(keyText)) return pathText + "." + keyText;
 		return pathText + "[" + JSON.stringify(keyText) + "]";
 	}
+	/** generate new free variable name */
 	newName() {
-		return varNameGen.next().value;
+		return this.shared.varNameGen.next().value;
 	}
-	resetNameGenerator() {
-		varNameGen = VariableNameGenerator();
-		lastInitTime = 0;
-		this.initTime = ++lastInitTime;
+	newSharedItems() {
+		this.shared = { varNameGen: VariableNameGenerator(), lastInitTime: 0 };
+		this.initTime = ++this.shared.lastInitTime;
+	}
+	/**
+	 * check that this path has less initTime
+	 * @param {PathClass} path
+	 */
+	isBefore(path) {
+		return this.initTime < path.initTime;
+	}
+	getNewInitTime() {
+		return ++this.shared.lastInitTime;
+	}
+	/**
+	 * copy shared items from a path to this
+	 * @param {PathClass} path
+	 */
+	getSharedItems(path) {
+		this.shared = path.shared;
+		if (typeof this.initTime == "undefined")
+			this.initTime = ++this.shared.lastInitTime;
 	}
 }
 

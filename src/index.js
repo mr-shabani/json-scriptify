@@ -1,16 +1,27 @@
 var ScriptFromObject = require("./ScriptFromObject");
 
-var scriptify = function(obj, options) {
+/**
+ * return an script that can produce an object the same as input object
+ * @param {any} obj
+ * @param {function(any):any} Replacer
+ * @param {Object} options
+ * @returns {string}
+ */
+var scriptify = function(obj, Replacer, options) {
+	options = options || {};
+	options.lineBreak =
+		typeof options.lineBreak == "string" ? options.lineBreak : "\n ";
+	options.replacer = Replacer;
+	var scriptFromObject = new ScriptFromObject(
+		obj,
+		undefined,
+		undefined,
+		options
+	);
 
-	var scriptFromObject = new ScriptFromObject(obj);
-
-	const script = scriptFromObject.exportAsFunctionCall(options);
+	const script = scriptFromObject.export(options);
 
 	return script;
 };
-
-// scriptify.withAllFunctions = function(obj) {
-// 	return scriptify(obj, { withAllFunctions: true });
-// };
 
 module.exports = scriptify;
