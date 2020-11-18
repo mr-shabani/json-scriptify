@@ -1,3 +1,4 @@
+const { types } = require("util");
 /**
  * @typedef {Object} classToPlainObject
  * @property {string|function|function[]} type
@@ -18,18 +19,21 @@ let classes = [
 	},
 	{
 		type: Date,
+		isTypeOf: types.isDate,
 		toPlainObject: function(date) {
 			return date.getTime();
 		}
 	},
 	{
 		type: RegExp,
+		isTypeOf: types.isRegExp,
 		toPlainObject: function(regexp) {
 			return regexp.toString();
 		}
 	},
 	{
 		type: Map,
+		isTypeOf: types.isMap,
 		toPlainObject: function(map) {
 			return Array.from(map);
 		}
@@ -37,24 +41,21 @@ let classes = [
 	{
 		// comparing two sets is a complex issue. We consider only simple scenarios.
 		type: Set,
+		isTypeOf: types.isSet,
 		toPlainObject: function(set) {
 			return Array.from(set).sort((a, b) => String(a) < String(b));
 		}
 	},
 	{
-		type: Function,
-		toPlainObject: function(func) {
-			return func.toString();
-		}
-	},
-	{
 		type: Symbol,
+		isTypeOf: types.isSymbolObject,
 		toPlainObject: function(sym) {
 			return sym.valueOf();
 		}
 	},
 	{
 		type: Object.getPrototypeOf(Int8Array), // TypedArray class
+		isTypeOf: types.isTypedArray,
 		toPlainObject: function(typedArray) {
 			return [
 				typedArray.buffer,
@@ -66,20 +67,29 @@ let classes = [
 	},
 	{
 		type: DataView,
+		isTypeOf: types.isDataView,
 		toPlainObject: function(dataView) {
 			return [dataView.buffer, dataView.byteOffset, dataView.length];
 		}
 	},
 	{
 		type: ArrayBuffer,
+		isTypeOf: types.isArrayBuffer,
 		toPlainObject: function(buff) {
 			return Array.from(new Uint8Array(buff));
 		}
 	},
 	{
 		type: SharedArrayBuffer,
+		isTypeOf: types.isSharedArrayBuffer,
 		toPlainObject: function(buff) {
 			return Array.from(new Uint8Array(buff));
+		}
+	},
+	{
+		type: "function",
+		toPlainObject: function(func) {
+			return func.toString();
 		}
 	}
 ];

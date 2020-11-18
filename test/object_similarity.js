@@ -23,8 +23,8 @@ var checkSimilarity = function(obj1, obj2) {
 	mark.set(obj1, obj2);
 
 	for (let cls of classToPlainObject) {
-		if (isInstanceOf(cls.type, obj1) || isInstanceOf(cls.type, obj2)) {
-			if (!(isInstanceOf(cls.type, obj1) && isInstanceOf(cls.type, obj2))) {
+		if (isInstanceOf(cls, obj1) || isInstanceOf(cls, obj2)) {
+			if (!(isInstanceOf(cls, obj1) && isInstanceOf(cls, obj2))) {
 				return false;
 			}
 			return checkSimilarity(

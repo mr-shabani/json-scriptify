@@ -1,7 +1,3 @@
-var PathClass = require("./PathClass");
-var { makeFlat, ExpressionClass } = require("./ExpressionClass");
-var classToScript = require("./classToScript");
-
 /**
  * simplify keys that only have numbers or alphabets with numbers
  * @param {string} keyText key
@@ -21,7 +17,9 @@ var cleanKey = function(keyText) {
  * @param {(string|function|Array.<function>)} type
  * @param {} obj
  */
-var isInstanceOf = function(type, obj) {
+var isInstanceOf = function(cls, obj) {
+	if (cls.isTypeOf) return cls.isTypeOf(obj);
+	const type = cls.type;
 	if (typeof type == "string") return typeof obj == type;
 	if (typeof type == "object" && type instanceof Array)
 		return type.some(t => obj instanceof t);
@@ -62,13 +60,14 @@ var objectIsSame = function(obj1, obj2) {
  * @returns {string[]} keys that have a same value
  */
 var getSameProperties = function(obj, script) {
-	eval(`
+	const evaluate_script = new Function(`
 			var PleaseDoNotUseThisNameThatReservedForScriptifyModule = ${script}
-			`);
+			return PleaseDoNotUseThisNameThatReservedForScriptifyModule;
+    `);
 	// eslint-disable-next-line no-undef
-	const evaluated_obj = PleaseDoNotUseThisNameThatReservedForScriptifyModule;
+	const evaluated_obj = evaluate_script();
 	var sameProperties = Object.getOwnPropertyNames(evaluated_obj).filter(key => {
-		if (["caller", "callee", "arguments"].includes(key)) return false; // for 'use strict' mode
+		if (["caller", "callee", "arguments"].includes(key)) return true; // for 'use strict' mode
 		if (!(isEmptyObject(obj[key]) && isEmptyObject(evaluated_obj[key]))) {
 			if (
 				obj[key] !== evaluated_obj[key] &&
@@ -141,16 +140,23 @@ class innerObject {
 	}
 }
 
+const isBigIntObject = function(obj) {
+	if (typeof obj != "object") return false;
+	try {
+		BigInt.prototype.valueOf.call(obj);
+	} catch (e) {
+		return false;
+	}
+	return true;
+};
+
 module.exports = {
 	isInstanceOf,
 	getSameProperties,
 	objectIsSame,
-	PathClass,
 	cleanKey,
 	insertBetween,
-	makeFlat,
-	ExpressionClass,
-	classToScript,
 	hideKeys,
-	innerObject
+	innerObject,
+	isBigIntObject
 };

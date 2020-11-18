@@ -1,17 +1,21 @@
 /* eslint-disable no-undef */
-var {
+const { types: utilTypes } = require("util");
+const {
 	objectIsSame,
 	getSameProperties,
 	cleanKey,
 	insertBetween,
-	ExpressionClass,
-	classToScript,
 	hideKeys,
-	innerObject
+	innerObject,
+	isBigIntObject
 } = require("./helper");
-var makeExpression = ExpressionClass.prototype.makeExpression;
 
-var classes = [
+const classToScript = require("./classToScript");
+
+const { ExpressionClass } = require("./ExpressionClass");
+const makeExpression = ExpressionClass.prototype.makeExpression;
+
+const classes = [
 	{
 		type: "symbol",
 		toScript: function(obj) {
@@ -21,24 +25,28 @@ var classes = [
 	},
 	{
 		type: Number,
+		isTypeOf: utilTypes.isNumberObject,
 		toScript: function(obj) {
 			return `new Number(${JSON.stringify(obj)})`;
 		}
 	},
 	{
 		type: BigInt,
+		isTypeOf: isBigIntObject,
 		toScript: function(obj) {
 			return `Object(BigInt(${obj.valueOf().toString()}))`;
 		}
 	},
 	{
 		type: Boolean,
+		isTypeOf: utilTypes.isBooleanObject,
 		toScript: function(obj) {
 			return `new Boolean(${JSON.stringify(obj)})`;
 		}
 	},
 	{
 		type: String,
+		isTypeOf: utilTypes.isStringObject,
 		toScript: function(obj) {
 			/** @type {string[]} object keys that will be ignored in produce script*/
 			this.ignoreProperties = ["length"];
@@ -50,6 +58,7 @@ var classes = [
 	},
 	{
 		type: Symbol,
+		isTypeOf: utilTypes.isSymbolObject,
 		toScript: function(obj, getScript, path) {
 			/** 'init' expressions will be inserted at the first and
 			 *  'add' expressions will be inserted at the last.*/
@@ -61,12 +70,14 @@ var classes = [
 	},
 	{
 		type: Date,
+		isTypeOf: utilTypes.isDate,
 		toScript: function(obj) {
 			return `new Date(${obj.getTime()})`;
 		}
 	},
 	{
 		type: RegExp,
+		isTypeOf: utilTypes.isRegExp,
 		toScript: function(obj) {
 			/** @type {string[]} object keys that will be ignored in produce script*/
 			this.ignoreProperties = getSameProperties(obj, obj.toString());
@@ -75,6 +86,7 @@ var classes = [
 	},
 	{
 		type: Map,
+		isTypeOf: utilTypes.isMap,
 		toScript: function(obj, getScript, path) {
 			let mapContentArray = Array.from(obj);
 			if (mapContentArray.length == 0) return "new Map()";
@@ -95,6 +107,7 @@ var classes = [
 	},
 	{
 		type: Set,
+		isTypeOf: utilTypes.isSet,
 		toScript: function(obj, getScript, path) {
 			let setContentArray = Array.from(obj);
 			if (setContentArray.length == 0) return "new Set()";
@@ -121,6 +134,7 @@ var classes = [
 			RangeError,
 			ReferenceError
 		],
+		isTypeOf: utilTypes.isNativeError,
 		toScript: function(obj) {
 			let ErrorName = Object.getPrototypeOf(obj).constructor.name;
 			let script = `new ${ErrorName}(${JSON.stringify(obj.message)})`;
@@ -131,6 +145,7 @@ var classes = [
 	},
 	{
 		type: DataView,
+		isTypeOf: utilTypes.isDataView,
 		toScript: function(obj, getScript, path) {
 			let length =
 				obj.byteLength == obj.buffer.byteLength - obj.byteOffset
@@ -165,6 +180,7 @@ var classes = [
 			BigInt64Array,
 			BigUint64Array
 		],
+		isTypeOf: utilTypes.isTypedArray,
 		toScript: function(obj, getScript, path) {
 			let TypedArrayName = Object.getPrototypeOf(obj).constructor.name;
 			/** @type {string[]} object keys that will be ignored in produce script*/
@@ -192,6 +208,7 @@ var classes = [
 	},
 	{
 		type: ArrayBuffer,
+		isTypeOf: utilTypes.isArrayBuffer,
 		toScript: function(obj) {
 			let uint8 = new Uint8Array(obj);
 			let content = "";
@@ -206,6 +223,7 @@ var classes = [
 	},
 	{
 		type: SharedArrayBuffer,
+		isTypeOf: utilTypes.isSharedArrayBuffer,
 		toScript: function(obj, getScript, path) {
 			let uint8 = new Uint8Array(obj);
 			let content = "";
@@ -232,7 +250,7 @@ var classes = [
 		}
 	},
 	{
-		type: Function,
+		type: "function",
 		toScript: function(obj, getScript, path) {
 			var scriptArray;
 			let stringOfObj = obj.toString();
@@ -279,18 +297,21 @@ var classes = [
 	},
 	{
 		type: WeakSet,
+		isTypeOf: utilTypes.isWeakSet,
 		toScript: function() {
 			throw new TypeError("WeakSet cannot be scriptify!");
 		}
 	},
 	{
 		type: WeakMap,
+		isTypeOf: utilTypes.isWeakMap,
 		toScript: function() {
 			throw new TypeError("WeakMap cannot be scriptify!");
 		}
 	},
 	{
 		type: Array,
+		isTypeOf: Array.isArray,
 		toScript: function(obj, getScript, path) {
 			var initScript = [[]];
 			var addScript = [[]];
@@ -390,7 +411,7 @@ var classes = [
  * Array of types and their toScript methods.
  * @type {typeToScript[]}
  */
-var types = [
+const types = [
 	{
 		isTypeOf: obj => typeof obj == "bigint",
 		toScript: function(obj) {
