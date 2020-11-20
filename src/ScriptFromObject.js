@@ -1,3 +1,4 @@
+"use strict";
 var { classes: classesToScript, types: typesToScript } = require("./toScript");
 var { innerObject, isInstanceOf } = require("./helper");
 const PathClass = require("./PathClass");

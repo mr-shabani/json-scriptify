@@ -1,4 +1,5 @@
 /* eslint-disable no-undef */
+"use strict";
 const { types: utilTypes } = require("util");
 const {
 	objectIsSame,

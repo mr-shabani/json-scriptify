@@ -1,3 +1,4 @@
+"use strict";
 /**
  * if arr  includes any array the content of that array will be inserted in arr
  * and that array will be removed from arr.

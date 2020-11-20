@@ -1,3 +1,4 @@
+"use strict";
 /**
  * @type {string[]} array of alphabet characters a-z & A-Z
  * @constant

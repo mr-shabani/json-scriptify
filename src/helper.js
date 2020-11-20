@@ -1,3 +1,4 @@
+"use strict";
 /**
  * simplify keys that only have numbers or alphabets with numbers
  * @param {string} keyText key

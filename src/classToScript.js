@@ -1,3 +1,4 @@
+"use strict";
 /**
  * give a class object and make a script for that.
  */
