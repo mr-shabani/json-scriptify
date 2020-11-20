@@ -6,6 +6,8 @@ var predefinedValues = require("./predefinedValues");
 const { ExpressionClass } = require("./ExpressionClass");
 var makeExpression = ExpressionClass.prototype.makeExpression;
 
+const funcNameRegexp = /^(class|function)\s+(?<name>[a-zA-Z_]\w*)[\s{(]/;
+
 /**
  * create script expressions from object
  * @class ScriptClass
@@ -33,13 +35,19 @@ class ScriptClass {
 			var objName = "obj";
 			if (typeof obj == "function") {
 				const funcName = obj.name;
-				if (
-					typeof funcName == "string" &&
-					/^[a-zA-Z_]\w*$/.test(funcName) &&
-					funcName.length <= 5 &&
-					funcName != "_"
-				)
-					objName = funcName;
+				if (typeof funcName == "string") {
+					const regexpMatch = Function.prototype.toString
+						.call(obj)
+						.match(funcNameRegexp);
+					if (
+						regexpMatch &&
+						funcName == regexpMatch.groups.name &&
+						funcName.length <= 5 &&
+						funcName != "_"
+					)
+						objName = funcName;
+					else if (objName == funcName) objName = "Obj";
+				}
 			}
 			this.path = new PathClass(objName);
 			this.path.newSharedItems();
