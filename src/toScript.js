@@ -254,10 +254,13 @@ const classes = [
 		toScript: function(obj, getScript, path) {
 			var scriptArray;
 			let stringOfObj = obj.toString();
-			if (/\{\s*\[native code]\s*}$/.test(stringOfObj)) {
+			const nativeFunctionRegExp = /\{\s*\[native code]\s*}$/;
+			if (nativeFunctionRegExp.test(stringOfObj)) {
 				throw new TypeError("native code functions cannot be scriptified!");
 			}
-			if (stringOfObj.startsWith("class")) {
+
+			const classRegExp = /^class\s+[a-zA-Z_]\w*/;
+			if (classRegExp.test(stringOfObj)) {
 				scriptArray = classToScript(obj, getScript, path, makeExpression);
 			} else scriptArray = [stringOfObj];
 
