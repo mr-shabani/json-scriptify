@@ -1,6 +1,6 @@
 {
 	"name": "json-scriptify",
-	"version": "0.8.0",
+	"version": "0.8.1",
 	"description": "Convert a javascript object to a script",
 	"main": "src/index.js",
 	"scripts": {

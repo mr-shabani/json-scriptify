@@ -118,3 +118,9 @@ test("class with complex name for inheritance", function() {
 		checkSimilarity(run({ f: objConstructor() }), { f: obj2Constructor() })
 	).toEqual(true);
 });
+
+test("arrow function that starts with class identifier", function() {
+	var obj = class_ => 1;
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ f: obj })).toEqual(true);
+});

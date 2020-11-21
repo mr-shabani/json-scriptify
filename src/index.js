@@ -1,3 +1,4 @@
+"use strict";
 var ScriptFromObject = require("./ScriptFromObject");
 
 /**

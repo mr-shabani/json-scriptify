@@ -1,12 +1,13 @@
+"use strict";
 var { classes: classesToScript, types: typesToScript } = require("./toScript");
-var {
-	innerObject,
-	isInstanceOf,
-	PathClass,
-	ExpressionClass
-} = require("./helper");
+var { innerObject, isInstanceOf } = require("./helper");
+const PathClass = require("./PathClass");
 var predefinedValues = require("./predefinedValues");
+
+const { ExpressionClass } = require("./ExpressionClass");
 var makeExpression = ExpressionClass.prototype.makeExpression;
+
+const funcNameRegexp = /^(class|function)\s+(?<name>[a-zA-Z_]\w*)[\s{(]/;
 
 /**
  * create script expressions from object
@@ -32,7 +33,24 @@ class ScriptClass {
 				this.path.getSharedItems(parent.path);
 			} else this.path = path;
 		} else {
-			this.path = new PathClass("obj");
+			var objName = "obj";
+			if (typeof obj == "function") {
+				const funcName = obj.name;
+				if (typeof funcName == "string") {
+					const regexpMatch = Function.prototype.toString
+						.call(obj)
+						.match(funcNameRegexp);
+					if (
+						regexpMatch &&
+						funcName == regexpMatch.groups.name &&
+						funcName.length <= 5 &&
+						funcName != "_"
+					)
+						objName = funcName;
+					else if (objName == funcName) objName = "Obj";
+				}
+			}
+			this.path = new PathClass(objName);
 			this.path.newSharedItems();
 			this.shared = {
 				mark: new Map(
@@ -132,7 +150,7 @@ class ScriptClass {
 		/** @type {Array<string>} keys that must be ignored during makeScriptFromObjectProperties */
 		var ignoreProperties = [];
 		for (let cls of classesToScript) {
-			if (isInstanceOf(cls.type, obj)) {
+			if (isInstanceOf(cls, obj)) {
 				const expression = cls.toScript(obj, this.getScript, this.path);
 				this.addExpression(expression);
 				ignoreProperties = cls.ignoreProperties || [];
