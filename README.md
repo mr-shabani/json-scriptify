@@ -139,12 +139,12 @@ let scriptify = require("json-scriptify");
 
 let obj = { num: 1, str: "string", date: new Date(), re: /any regex/g };
 
-let Replacer = function(value) {
-	if (typeof value == "object") return;
+let replacer = function(value) {
+	if (typeof value == "object" && value!==obj) return;
 	return value;
 };
 
-var script = scriptify(obj);
+var script = scriptify(obj,replacer);
 
 console.log(script);
 // ({num:1,str:"string",date:undefined,re:undefined})
@@ -168,7 +168,7 @@ let scriptify = require("json-scriptify");
 let parentClass = class a {};
 let obj = class myExtendedClass extends parentClass {};
 
-var script = scriptify(obj, { predefined: [["parentClass", parentClass]] });
+var script = scriptify(obj,null, { predefined: [["parentClass", parentClass]] });
 
 console.log(script);
 /*
