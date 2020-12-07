@@ -1,13 +1,14 @@
 "use strict";
-var { classes: classesToScript, types: typesToScript } = require("./toScript");
-var { innerObject, isInstanceOf } = require("./helper");
+const {
+	classes: classesToScript,
+	types: typesToScript
+} = require("./toScript");
+const { innerObject, isInstanceOf, funcNameRegexp } = require("./helper");
 const PathClass = require("./PathClass");
-var predefinedValues = require("./predefinedValues");
+const predefinedValues = require("./predefinedValues");
 
 const { ExpressionClass } = require("./ExpressionClass");
-var makeExpression = ExpressionClass.prototype.makeExpression;
-
-const funcNameRegexp = /^(class|function)\s+(?<name>[a-zA-Z_]\w*)[\s{(]/;
+const makeExpression = ExpressionClass.prototype.makeExpression;
 
 /**
  * create script expressions from object
@@ -176,105 +177,53 @@ class ScriptClass {
 		allPropertyKeys.forEach(key => {
 			if (ignoreProperties.includes(key)) return;
 
-			var descriptor = Object.getOwnPropertyDescriptor(obj, key);
+			var desc = Object.getOwnPropertyDescriptor(obj, key);
 
-			let descriptionsText = `${descriptor.enumerable} ${descriptor.writable} ${descriptor.configurable}`;
+			let descriptionsText = `${desc.enumerable} ${desc.writable} ${desc.configurable}`;
 
-			if (propertiesWithDescriptionOf[descriptionsText])
-				propertiesWithDescriptionOf[descriptionsText].push([
-					key,
-					descriptor.value
-				]);
-			else {
-				propertiesWithDescriptionOf[descriptionsText] = [
-					[key, descriptor.value]
-				];
-			}
+			if (!propertiesWithDescriptionOf[descriptionsText])
+				propertiesWithDescriptionOf[descriptionsText] = {};
+			if (desc.configurable == false) delete desc.configurable;
+			if (desc.enumerable == false) delete desc.enumerable;
+			if (desc.writable == false) delete desc.writable;
+			if (desc.hasOwnProperty("get") && desc.get == undefined) delete desc.get;
+			if (desc.hasOwnProperty("set") && desc.set == undefined) delete desc.set;
+			if (descriptionsText == "true true true")
+				propertiesWithDescriptionOf[descriptionsText][key] = desc.value;
+			else
+				propertiesWithDescriptionOf[descriptionsText][key] = new innerObject(
+					desc
+				);
 		});
 
 		var allExistDescriptionsText = Object.keys(propertiesWithDescriptionOf);
 
 		allExistDescriptionsText.forEach(descriptionsText => {
 			if (descriptionsText == "true true true") {
-				if (propertiesWithDescriptionOf["true true true"].length < 3) {
-					propertiesWithDescriptionOf["true true true"].forEach(
-						([key, value]) => {
-							const valuePath = this.path.addWithNewInitTime(
-								key,
-								this.getScript
-							);
-							let valueScript = this.getScript(value, valuePath);
-							this.addExpression([
-								makeExpression(valuePath, "=", valueScript.popInit()),
-								valueScript
-							]);
-						}
-					);
-				} else {
+				const allTrueProperties = propertiesWithDescriptionOf["true true true"];
+				const newPath = this.path.cloneWithNewInitTime();
+				const propertiesScript = this.getScript(
+					new innerObject(allTrueProperties),
+					newPath
+				);
+				const initScript = propertiesScript.popInit();
+				if (initScript.isEmpty() == false)
 					this.addExpression(
-						makeExpression(
-							this.getScript(
-								new innerObject(
-									propertiesWithDescriptionOf["true true true"].map(
-										x => new innerObject(x)
-									)
-								)
-							),
-							".forEach(([k,v])=>{",
-							this.path,
-							"[k]=v;})"
-						)
+						makeExpression("Object.assign(", newPath, ",", initScript, ")")
 					);
-				}
+				this.addExpression(propertiesScript);
 			} else {
-				let descriptor = descriptionsText
-					.split(" ")
-					.map((value, ind) => {
-						if (value == "true") return descriptionList[ind] + ":" + value;
-					})
-					.filter(Boolean)
-					.join(",");
-				if (propertiesWithDescriptionOf[descriptionsText].length < 3) {
-					propertiesWithDescriptionOf[descriptionsText].forEach(
-						([key, value]) => {
-							let valuePath = this.path.addWithNewInitTime(key);
-							let valueScript = this.getScript(value, valuePath);
-							if (typeof key == "symbol") key = this.getScript(key);
-							else key = JSON.stringify(key);
-							this.addExpression([
-								makeExpression(
-									"Object.defineProperty(",
-									this.path,
-									",",
-									key,
-									",{value:",
-									valueScript.popInit(),
-									",",
-									descriptor,
-									"})"
-								),
-								valueScript
-							]);
-						}
-					);
-				} else {
-					this.addExpression(
-						makeExpression(
-							this.getScript(
-								new innerObject(
-									propertiesWithDescriptionOf[descriptionsText].map(
-										x => new innerObject(x)
-									)
-								)
-							),
-							".forEach(([k,v])=>{Object.defineProperty(",
-							this.path,
-							",k,{value:v,",
-							descriptor,
-							"});})"
-						)
-					);
-				}
+				this.addExpression(
+					makeExpression(
+						"Object.defineProperties(",
+						this.path,
+						",",
+						this.getScript(
+							new innerObject(propertiesWithDescriptionOf[descriptionsText])
+						),
+						")"
+					)
+				);
 			}
 		});
 	}
@@ -311,7 +260,7 @@ class ScriptClass {
 		var str = "(function(){" + lineBreak;
 		let rawScript = this.getRawScript();
 		if (!this.parent) {
-			if (this.path.newName() != "_.a") str += "const _={};" + lineBreak;
+			if (this.path._newName() != "_.a") str += "const _={};" + lineBreak;
 			str += `var ${this.path};${lineBreak}`;
 		}
 		str += rawScript;

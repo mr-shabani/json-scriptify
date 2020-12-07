@@ -65,7 +65,6 @@ var getSameProperties = function(obj, script) {
 			var PleaseDoNotUseThisNameThatReservedForScriptifyModule = ${script}
 			return PleaseDoNotUseThisNameThatReservedForScriptifyModule;
     `);
-	// eslint-disable-next-line no-undef
 	const evaluated_obj = evaluate_script();
 	var sameProperties = Object.getOwnPropertyNames(evaluated_obj).filter(key => {
 		if (["caller", "callee", "arguments"].includes(key)) return true; // for 'use strict' mode
@@ -141,6 +140,52 @@ class innerObject {
 	}
 }
 
+/**
+ * FunctionInObject class is a wrapper for an function that is
+ * part of an object definition.
+ */
+class FunctionInObject {
+	constructor(key, func) {
+		this.func = func;
+		this.key = key;
+	}
+}
+
+const funcNameRegexp = /^(class|function)\s+(?<name>[a-zA-Z_]\w*)[\s{(]/;
+
+const functionNameAndPrefixRegexp = [
+	/^(?<prefix>(function|get|set))\s+(?<name>[a-zA-Z_]\w*)\s*\(/,
+	/^(?<prefix>function)((?<generator>\s*\*\s*)|(\s+))(?<name>[a-zA-Z_]\w*)\s*\(/,
+	/^(?<name>[a-zA-Z_]\w*)\s*\(/,
+	/^(?<generator>\s*\*\s*)?(?<name>[a-zA-Z_]\w*)\s*\(/,
+	/^(?<prefix>function)\s*\(/,
+	/^(?<prefix>class)\s+(?<name>[a-zA-Z_]\w*)[\s{]/,
+	/^[a-zA-Z_]\w*\s*=>/,
+	/^\((\s*[a-zA-Z_]\w*\s*,?)*\)=>/,
+	/\{\s*\[(?<prefix>native) code]\s*}$/
+];
+
+const analyseFunctionCode = function(code) {
+	const funcData = {};
+	functionNameAndPrefixRegexp.some(re => {
+		const match = code.match(re);
+		if (match) {
+			const groups = match.groups;
+			if(!groups) return true;
+			Object.assign(funcData,groups);
+			if (groups.prefix == "native") funcData.isNative = true;
+			if (groups.generator) funcData.isGenerator = true;
+			if (groups.name && !groups.prefix) funcData.isMethod = true;
+			if (groups.prefix == "get" || groups.prefix == "set")
+				funcData.isGetterSetter = true;
+			if (groups.prefix == "class") funcData.isClass = true;
+			return true;
+		}
+		return false;
+	});
+	return funcData;
+};
+
 const isBigIntObject = function(obj) {
 	if (typeof obj != "object") return false;
 	try {
@@ -159,5 +204,8 @@ module.exports = {
 	insertBetween,
 	hideKeys,
 	innerObject,
-	isBigIntObject
+	isBigIntObject,
+	FunctionInObject,
+	funcNameRegexp,
+	analyseFunctionCode
 };

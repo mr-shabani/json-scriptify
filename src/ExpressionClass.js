@@ -26,14 +26,14 @@ class ExpressionClass {
 	 */
 	constructor() {
 		let args = makeFlat([...arguments]).map(x => {
-			if (x instanceof ExpressionClass) return x.expression;
+			if (x instanceof ExpressionClass) return x.expressions;
 			return x;
 		});
 		/** @type {Array} array of expression elements */
-		this.expression = makeFlat(args);
+		this.expressions = makeFlat(args);
 	}
 	toString() {
-		return this.expression.join("");
+		return this.expressions.join("");
 	}
 	/** construct a new Expression class and return it. */
 	makeExpression() {
@@ -41,15 +41,16 @@ class ExpressionClass {
 	}
 	/** remove elements and characters before the first '=' character and also itself. */
 	removeAssignment() {
-		while (this.expression.length > 0) {
-			if (typeof this.expression[0] != "string") {
-				this.expression.shift();
+		while (this.expressions.length > 0) {
+			if (typeof this.expressions[0] != "string") {
+				this.expressions.shift();
 			} else {
-				let index = this.expression[0].indexOf("=");
+				let index = this.expressions[0].indexOf("=");
 				if (index < 0) {
-					this.expression.shift();
+					this.expressions.shift();
 				} else {
-					this.expression[0] = this.expression[0].slice(index + 1);
+					this.expressions[0] = this.expressions[0].slice(index + 1);
+					if (this.expressions[0].length == 0) this.expressions.shift();
 					break;
 				}
 			}
@@ -57,7 +58,15 @@ class ExpressionClass {
 		return this;
 	}
 	isEmpty() {
-		return this.expression.length == 0;
+		return this.expressions.length == 0;
+	}
+	get initTime() {
+		let initTime = 0;
+		this.expressions.forEach(expr => {
+			if (typeof expr == "object" && expr.hasOwnProperty("initTime"))
+				if (initTime < expr.initTime) initTime = expr.initTime;
+		});
+		return initTime;
 	}
 }
 

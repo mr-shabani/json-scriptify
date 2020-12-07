@@ -39,11 +39,10 @@ var VariableNameGenerator = function*() {
  */
 class PathClass {
 	/**
-	 * @param {string} [key] string of variable name or key
+	 * @param {string|PathClass} [key] string of variable name or key
 	 * @param {PathClass} [parentNode] parent variable path that contain this variable
-	 * @param {boolean} [isSymbol] key is symbol or not
 	 */
-	constructor(key, parentNode, isSymbol) {
+	constructor(key, parentNode) {
 		if (parentNode) {
 			/** @type {PathClass} */
 			this.parent = parentNode;
@@ -52,9 +51,7 @@ class PathClass {
 			/** @type {Object} shared items between all paths */
 			this.shared = parentNode.shared;
 		}
-		if (isSymbol)
-			/** type {boolean} key is symbol or not */ this.isSymbol = true;
-		if (typeof key != "undefined")
+		if (typeof key == "string" || (typeof key == "object" && key != null))
 			/** @type {string} string of variable name or key */ this.key = key;
 	}
 	/** make a new path with the same shared items */
@@ -65,13 +62,25 @@ class PathClass {
 	}
 	/**
 	 * make a new path with the same shared items and new init time
+	 * that be the same of this path
+	 */
+	cloneWithNewInitTime() {
+		let newPath;
+		if (this.key) newPath = new PathClass(this.key, this.parent);
+		else newPath = new PathClass(this.key, this);
+		newPath.getSharedItems(this);
+		newPath.initTime = this._getNewInitTime();
+		return newPath;
+	}
+	/**
+	 * make a new path with the same shared items and new init time
 	 * that be child of this path
 	 * @param {(string|symbol)} key
 	 * @param {function} getScript
 	 */
 	addWithNewInitTime(key, getScript) {
 		let newPath = this.add(key, getScript);
-		newPath.initTime = ++this.shared.lastInitTime;
+		newPath.initTime = this._getNewInitTime();
 		return newPath;
 	}
 	/**
@@ -84,32 +93,35 @@ class PathClass {
 		var newPath;
 		if (typeof key == "symbol") {
 			key = getScript(key);
-			newPath = new PathClass(key, this, true);
+			newPath = new PathClass(key, this);
 		} else newPath = new PathClass(key, this);
 
 		return newPath;
 	}
 	toString() {
-		if (this.parent) return this.addToPath(this.parent.toString(), this.key);
-		if (typeof this.key != "undefined") return this.key;
-		this.key = this.newName();
+		if (this.parent) {
+			if (this.key == undefined) return this.parent.toString();
+			return this._addKeyToPathText(this.parent.toString(), this.key);
+		}
+		if (this.key != undefined) return this.key;
+		this.key = this._newName();
 		return this.key;
 	}
 	/**
-	 * based on isSymbol and keyText generate new path
+	 * based on pathText and keyText generate new path
 	 * @param {string} pathText
 	 * @param {string} keyText
 	 */
-	addToPath(pathText, keyText) {
-		if (this.isSymbol) return pathText + "[" + keyText + "]";
-		const alphabetCheckRegexp = /^[A-Za-z_]+[A-Za-z0-9_]*$/;
+	_addKeyToPathText(pathText, keyText) {
+		if (typeof keyText != "string") return pathText + "[" + keyText + "]";
+		const alphabetCheckRegexp = /^[A-Za-z_][A-Za-z0-9_]*$/;
 		if (String(parseInt(keyText)) == keyText && keyText != "NaN")
 			return pathText + "[" + parseInt(keyText) + "]";
 		if (alphabetCheckRegexp.test(keyText)) return pathText + "." + keyText;
 		return pathText + "[" + JSON.stringify(keyText) + "]";
 	}
 	/** generate new free variable name */
-	newName() {
+	_newName() {
 		return this.shared.varNameGen.next().value;
 	}
 	newSharedItems() {
@@ -117,13 +129,21 @@ class PathClass {
 		this.initTime = ++this.shared.lastInitTime;
 	}
 	/**
-	 * check that this path has less initTime
+	 * check that this path has initialized before argument path.
 	 * @param {PathClass} path
 	 */
 	isBefore(path) {
 		return this.initTime < path.initTime;
 	}
-	getNewInitTime() {
+	/**
+	 * check that this path has initialized before argument path or 
+	 * at the same time.
+	 * @param {PathClass} path
+	 */
+	isNotAfter(path) {
+		return this.initTime <= path.initTime;
+	}
+	_getNewInitTime() {
 		return ++this.shared.lastInitTime;
 	}
 	/**
@@ -133,7 +153,7 @@ class PathClass {
 	getSharedItems(path) {
 		this.shared = path.shared;
 		if (typeof this.initTime == "undefined")
-			this.initTime = ++this.shared.lastInitTime;
+			this.initTime = this._getNewInitTime();
 	}
 }
 

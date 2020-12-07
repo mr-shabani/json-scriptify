@@ -74,7 +74,7 @@ myObj.inheritClass = class b extends myObj.class {
 // myObj.x = 1;
 // myObj[4] = 2;
 // myObj["6"] = 1;
-// sym = Symbol("test");
+// let sym = Symbol("test");
 // myObj.a = [sym, myObj, 3, 4];
 // myObj.a.b = { x: 1, [sym]: sym };
 // myObj.length = 20;
@@ -93,7 +93,7 @@ myObj.inheritClass = class b extends myObj.class {
 // 	}
 // }
 
-// b = function() {};
+// let b = function() {};
 
 // b.prototype.z = 1;
 
@@ -102,7 +102,7 @@ myObj.inheritClass = class b extends myObj.class {
 // 		super();
 // 	}
 // }
-// myObj = c;
+// myObj = a;
 
 // o = {c:class a extends b{}}
 // o.x = class b extends o.c {};
@@ -151,7 +151,14 @@ myObj.inheritClass = class b extends myObj.class {
 // 	current_obj.obj = {};
 // 	current_obj = current_obj.obj;
 // }
-myObj = Symbol.replace;
+// myObj = Symbol.replace;
+// myObj = require('fs');
+
+myObj = function(){}
+let sym = Symbol();
+// let sym = "r";
+myObj[sym] = function x(){}
+myObj[sym]['a']=1
 
 var script = json_scriptify(myObj);
 

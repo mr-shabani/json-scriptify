@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 var scriptify = require("../../../");
 var checkSimilarity = require("../../object_similarity");
 
@@ -12,7 +13,25 @@ var checkFor = function(obj, withFunctions) {
 };
 
 test("function with properties", function() {
-	var obj = () => 1;
+	var obj = function() {};
+	obj.x = 1;
+	obj.f = obj;
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ f: obj })).toEqual(true);
+	obj = function f() {};
+	obj.x = 1;
+	obj.f = obj;
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ f: obj })).toEqual(true);
+	obj = function() {};
+	let sym = Symbol();
+	obj[sym] = function x() {};
+	obj[sym]["a"] = 1;
+	expect(checkFor(obj)).toEqual(true);
+	expect(checkFor({ f: obj })).toEqual(true);
+});
+test("arrow function with properties", function() {
+	obj = () => 1;
 	obj.x = 1;
 	obj.f = obj;
 	expect(checkFor(obj)).toEqual(true);
@@ -20,7 +39,9 @@ test("function with properties", function() {
 });
 
 test("Generator function", function() {
-	var obj = function* (){yield 1;};
+	var obj = function*() {
+		yield 1;
+	};
 	obj.x = 1;
 	obj.f = obj;
 	expect(checkFor(obj)).toEqual(true);
