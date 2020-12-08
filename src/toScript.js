@@ -9,7 +9,6 @@ const {
 	hideKeys,
 	innerObject,
 	isBigIntObject,
-	FunctionInObject,
 	analyseFunctionCode
 } = require("./helper");
 
@@ -327,76 +326,6 @@ const classes = [
 		}
 	},
 	{
-		type: FunctionInObject,
-		isTypeOf: obj =>
-			typeof obj == "function" && obj instanceof FunctionInObject,
-		toScript: function(obj, getScript, path) {
-			const key = obj.key;
-			obj = obj.func;
-			var scriptArray;
-			let funcCode = obj.toString();
-			const funcData = analyseFunctionCode(funcCode);
-			if (funcData.isNative) {
-				throw new TypeError("native code functions cannot be scriptified!");
-			}
-
-			if (funcData.isClass) {
-				scriptArray = classToScript(obj, getScript, path, makeExpression);
-				scriptArray[0] = JSON.stringify(key) + ":" + scriptArray[0];
-			} else if (funcData.isGetterSetter || funcData.isMethod) {
-				if (key === funcData.name) scriptArray = [funcCode];
-				else if (funcData.isMethod) {
-					scriptArray = [
-						`${JSON.stringify(key)}:({${funcCode}}).${JSON.stringify(
-							funcData.name
-						)}`
-					];
-				} else if (funcData.isGetterSetter) {
-					scriptArray = [
-						`${JSON.stringify(
-							key
-						)}:Object.getOwnPropertyDescriptor({${funcCode}},${JSON.stringify(
-							funcData.name
-						)}).${funcData.prefix}`
-					];
-				}
-			} else scriptArray = [JSON.stringify(key) + ":" + funcCode];
-
-			if (hasOwn.call(obj, "prototype")) {
-				let default_prototype = { constructor: obj };
-				default_prototype.__proto__ = obj.prototype.__proto__;
-				if (!objectIsSame(obj.prototype, default_prototype)) {
-					let prototypePath = path.addWithNewInitTime("prototype");
-					let prototypeScript;
-					if (obj.prototype.constructor == obj)
-						prototypeScript = getScript(
-							hideKeys(obj.prototype, ["constructor"]),
-							prototypePath
-						);
-					else prototypeScript = getScript(obj.prototype, prototypePath);
-					scriptArray.push(
-						makeExpression(
-							"Object.assign(",
-							prototypePath,
-							",",
-							prototypeScript.popInit(),
-							")"
-						),
-						prototypeScript
-					);
-				}
-			}
-			try {
-				this.ignoreProperties = getSameProperties(obj, scriptArray[0]);
-			} catch (e) {
-				this.ignoreProperties = [];
-			}
-			if (key === funcData.name) this.ignoreProperties.push("name");
-			this.ignoreProperties.push("prototype");
-			return scriptArray;
-		}
-	},
-	{
 		type: "function",
 		toScript: function(obj, getScript, path) {
 			var scriptArray;
@@ -469,6 +398,23 @@ const classes = [
 				.filter(key => {
 					const desc = Object.getOwnPropertyDescriptor(obj, key);
 					descriptors[key] = desc;
+					if (
+						desc.configurable &&
+						desc.enumerable &&
+						desc.writable == undefined
+					) {
+						if (typeof desc.get == "function") {
+							let funcData = analyseFunctionCode(desc.get.toString());
+							if (funcData.prefix != "get" || funcData.name !== key)
+								return false;
+						}
+						if (typeof desc.set == "function") {
+							let funcData = analyseFunctionCode(desc.set.toString());
+							if (funcData.prefix != "set" || funcData.name !== key)
+								return false;
+						}
+						return true;
+					}
 					return desc.configurable && desc.writable && desc.enumerable;
 				});
 
@@ -478,18 +424,62 @@ const classes = [
 
 			keys.forEach(key => {
 				const desc = descriptors[key];
+				var keyPath;
 				if (typeof key == "symbol") {
-					var keyPath = getScript(key);
+					keyPath = getScript(key);
 					if (path.isNotAfter(keyPath)) return;
-				}
+				} else keyPath = JSON.stringify(key);
 				if ("value" in desc) {
 					let valueScript = getScript(desc.value, path.add(key, getScript));
 					let initValueScript = valueScript.popInit();
 					if (initValueScript.isEmpty() == false) {
 						if (typeof key == "symbol") {
 							objectExpression.push("[", keyPath, "]:", initValueScript, ",");
+						} else if (typeof desc.value == "function") {
+							const funcCode = desc.value.toString();
+							let funcData = analyseFunctionCode(funcCode);
+							if (funcData.isMethod && funcData.name === key)
+								objectExpression.push(funcCode, ",");
+							else
+								objectExpression.push(cleanKey(key), ":", initValueScript, ",");
 						} else
 							objectExpression.push(cleanKey(key), ":", initValueScript, ",");
+					}
+					nextScript.push(valueScript);
+				}
+				if (desc.get) {
+					const getterPath = path.newPath(
+						makeExpression(
+							"Object.getOwnPropertyDescriptor(",
+							path,
+							",",
+							keyPath,
+							").get"
+						)
+					);
+					let valueScript = getScript(desc.get, getterPath);
+					let initValueScript = valueScript.popInit();
+					if (initValueScript.isEmpty() == false) {
+						initValueScript = desc.get.toString();
+						objectExpression.push(initValueScript, ",");
+					}
+					nextScript.push(valueScript);
+				}
+				if (desc.set) {
+					const setterPath = path.newPath(
+						makeExpression(
+							"Object.getOwnPropertyDescriptor(",
+							path,
+							",",
+							keyPath,
+							").set"
+						)
+					);
+					let valueScript = getScript(desc.set, setterPath);
+					let initValueScript = valueScript.popInit();
+					if (initValueScript.isEmpty() == false) {
+						initValueScript = desc.set.toString();
+						objectExpression.push(initValueScript, ",");
 					}
 					nextScript.push(valueScript);
 				}

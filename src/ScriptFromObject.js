@@ -186,7 +186,9 @@ class ScriptClass {
 			if (desc.configurable == false) delete desc.configurable;
 			if (desc.enumerable == false) delete desc.enumerable;
 			if (desc.writable == false) delete desc.writable;
+			// eslint-disable-next-line no-prototype-builtins
 			if (desc.hasOwnProperty("get") && desc.get == undefined) delete desc.get;
+			// eslint-disable-next-line no-prototype-builtins
 			if (desc.hasOwnProperty("set") && desc.set == undefined) delete desc.set;
 			if (descriptionsText == "true true true")
 				propertiesWithDescriptionOf[descriptionsText][key] = desc.value;

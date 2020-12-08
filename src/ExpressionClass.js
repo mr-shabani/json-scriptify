@@ -25,12 +25,8 @@ class ExpressionClass {
 	 * @param {...(string|ExpressionClass)} expression elements
 	 */
 	constructor() {
-		let args = makeFlat([...arguments]).map(x => {
-			if (x instanceof ExpressionClass) return x.expressions;
-			return x;
-		});
-		/** @type {Array} array of expression elements */
-		this.expressions = makeFlat(args);
+		/** @type {Array.<(string|ExpressionClass)>} array of expressions elements */
+		this.expressions = makeFlat(Array.from(arguments));
 	}
 	toString() {
 		return this.expressions.join("");
@@ -63,6 +59,7 @@ class ExpressionClass {
 	get initTime() {
 		let initTime = 0;
 		this.expressions.forEach(expr => {
+			// eslint-disable-next-line no-prototype-builtins
 			if (typeof expr == "object" && expr.hasOwnProperty("initTime"))
 				if (initTime < expr.initTime) initTime = expr.initTime;
 		});

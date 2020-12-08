@@ -140,20 +140,10 @@ class innerObject {
 	}
 }
 
-/**
- * FunctionInObject class is a wrapper for an function that is
- * part of an object definition.
- */
-class FunctionInObject {
-	constructor(key, func) {
-		this.func = func;
-		this.key = key;
-	}
-}
-
 const funcNameRegexp = /^(class|function)\s+(?<name>[a-zA-Z_]\w*)[\s{(]/;
 
 const functionNameAndPrefixRegexp = [
+	/\{\s*\[(?<prefix>native) code]\s*}$/,
 	/^(?<prefix>(function|get|set))\s+(?<name>[a-zA-Z_]\w*)\s*\(/,
 	/^(?<prefix>function)((?<generator>\s*\*\s*)|(\s+))(?<name>[a-zA-Z_]\w*)\s*\(/,
 	/^(?<name>[a-zA-Z_]\w*)\s*\(/,
@@ -161,8 +151,7 @@ const functionNameAndPrefixRegexp = [
 	/^(?<prefix>function)\s*\(/,
 	/^(?<prefix>class)\s+(?<name>[a-zA-Z_]\w*)[\s{]/,
 	/^[a-zA-Z_]\w*\s*=>/,
-	/^\((\s*[a-zA-Z_]\w*\s*,?)*\)=>/,
-	/\{\s*\[(?<prefix>native) code]\s*}$/
+	/^\((\s*[a-zA-Z_]\w*\s*,?)*\)=>/
 ];
 
 const analyseFunctionCode = function(code) {
@@ -171,8 +160,8 @@ const analyseFunctionCode = function(code) {
 		const match = code.match(re);
 		if (match) {
 			const groups = match.groups;
-			if(!groups) return true;
-			Object.assign(funcData,groups);
+			if (!groups) return true;
+			Object.assign(funcData, groups);
 			if (groups.prefix == "native") funcData.isNative = true;
 			if (groups.generator) funcData.isGenerator = true;
 			if (groups.name && !groups.prefix) funcData.isMethod = true;
@@ -205,7 +194,6 @@ module.exports = {
 	hideKeys,
 	innerObject,
 	isBigIntObject,
-	FunctionInObject,
 	funcNameRegexp,
 	analyseFunctionCode
 };

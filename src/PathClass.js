@@ -14,7 +14,7 @@ for (let ch = "A"; ch <= "Z"; ch = String.fromCharCode(ch.charCodeAt(0) + 1))
  * @param {number} num
  * @returns {string}
  */
-var numberToAlphabetString = function(num) {
+const numberToAlphabetString = function(num) {
 	let alphabetString = alphabet[num % alphabet.length];
 	num = Math.floor(num / alphabet.length);
 	while (num) {
@@ -28,7 +28,7 @@ var numberToAlphabetString = function(num) {
  * @generator VariableNameGenerator
  * @yields {string} the next free variable name
  */
-var VariableNameGenerator = function*() {
+const VariableNameGenerator = function*() {
 	let keyNumber = 0;
 	while (true) yield "_." + numberToAlphabetString(keyNumber++);
 };
@@ -103,7 +103,8 @@ class PathClass {
 			if (this.key == undefined) return this.parent.toString();
 			return this._addKeyToPathText(this.parent.toString(), this.key);
 		}
-		if (this.key != undefined) return this.key;
+		if (typeof this.key == "object") return this.key.toString();
+		if (typeof this.key == "string") return this.key;
 		this.key = this._newName();
 		return this.key;
 	}

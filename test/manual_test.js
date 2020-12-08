@@ -154,11 +154,18 @@ myObj.inheritClass = class b extends myObj.class {
 // myObj = Symbol.replace;
 // myObj = require('fs');
 
-myObj = function(){}
-let sym = Symbol();
-// let sym = "r";
-myObj[sym] = function x(){}
-myObj[sym]['a']=1
+// myObj = function(){}
+// let sym = Symbol();
+// // let sym = "r";
+// myObj[sym] = function x(){}
+// myObj[sym]['a']=1
+
+myObj = { get c() { return 1; } ,set c(x){},M(x){return x}};
+// Object.defineProperty(myObj, "b", {
+// 	get: Object.getOwnPropertyDescriptor(myObj, "c").get,
+// 	configurable: true,
+// 	enumerable: true
+// });
 
 var script = json_scriptify(myObj);
 
