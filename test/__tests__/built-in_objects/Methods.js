@@ -18,6 +18,7 @@ test("simple method", function() {
 			return x;
 		}
 	};
+	expect(scriptify(o)).toBe("({func(x) {\n      return x;\n    }})");
 	var obj = o.func;
 	obj.x = 1;
 	obj.f = obj;
@@ -30,7 +31,7 @@ test("simple method", function() {
 	};
 	obj = o.function;
 	obj.x = 1;
-    obj.f = obj;
+	obj.f = obj;
 	expect(checkFor(obj)).toEqual(true);
 	expect(checkFor({ f: obj })).toEqual(true);
 	o = {
@@ -51,6 +52,7 @@ test("getter method", function() {
 			return 1;
 		}
 	};
+	expect(scriptify(o)).toBe("({get func() {\n      return 1;\n    }})");
 	var obj = Object.getOwnPropertyDescriptor(o, "func").get;
 	obj.x = 1;
 	obj.f = obj;
@@ -69,12 +71,12 @@ test("getter method", function() {
 
 test("setter method", function() {
 	var o = {
-		set func(x) {
-		}
+		set func(x) {}
 	};
+	expect(scriptify(o)).toBe("({set func(x) {}})");
 	var obj = Object.getOwnPropertyDescriptor(o, "func").set;
 	obj.x = 1;
-    obj.f = obj;
+	obj.f = obj;
 	expect(checkFor(obj)).toEqual(true);
 	expect(checkFor({ f: obj })).toEqual(true);
 	obj = {};
@@ -94,6 +96,7 @@ test("Generator methods", function() {
 			yield x;
 		}
 	};
+	expect(scriptify(o)).toBe("({*func(x) {\n      yield x;\n    }})");
 	var obj = o.func;
 	obj.x = 1;
 	obj.f = obj;
