@@ -14,7 +14,7 @@ let classes = [
 	{
 		type: "symbol",
 		toPlainObject: function(sym) {
-			return sym.toString();
+			return Symbol.prototype.toString.call(sym);
 		}
 	},
 	{
@@ -89,7 +89,7 @@ let classes = [
 	{
 		type: "function",
 		toPlainObject: function(func) {
-			return func.toString();
+			return Function.prototype.toString.call(func);
 		}
 	}
 ];

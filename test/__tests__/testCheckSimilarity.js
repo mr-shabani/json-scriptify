@@ -1,4 +1,5 @@
-var checkSimilarity = require("../object_similarity");
+/* eslint-disable no-undef */
+var checkSimilarity = require("../checkSimilarity");
 
 test("not object check", function() {
 	expect(checkSimilarity(1, 1)).toEqual(true);
@@ -31,10 +32,52 @@ test("simple object", function() {
 	expect(checkSimilarity({ x: [1, 2] }, { x: [1, 2] })).toEqual(true);
 });
 
+test("object with defined properties", function() {
+	let obj1 = {};
+	Object.defineProperty(obj1, "a", { value: 1, configurable: true });
+	let obj2 = {};
+	Object.defineProperty(obj2, "a", {
+		value: 1,
+		configurable: true,
+		writable: true
+	});
+	expect(checkSimilarity(obj1, obj2)).toEqual(false);
+	Object.defineProperty(obj2, "a", {
+		value: 1,
+		configurable: true,
+		writable: false
+	});
+	expect(checkSimilarity(obj1, obj2)).toEqual(true);
+	Object.defineProperty(obj1, "b", {
+		get() {
+			return 1;
+		},
+		configurable: true
+	});
+	Object.defineProperty(obj2, "b", { value: 1, configurable: true });
+	expect(checkSimilarity(obj1, obj2)).toEqual(false);
+	Object.defineProperty(obj2, "b", {
+		get() {
+			return 1;
+		},
+		configurable: true
+	});
+	expect(checkSimilarity(obj1, obj2)).toEqual(true);
+	Object.defineProperty(obj2, "b", {
+		get: function() {
+			return 1;
+		},
+		configurable: true
+	});
+	expect(checkSimilarity(obj1, obj2)).toEqual(false);
+});
+
 test("object with circular reference", function() {
 	let obj1 = {};
 	obj1.c = obj1;
 	let obj2 = {};
+	obj2.c = obj1;
+	expect(checkSimilarity(obj1, obj2)).toEqual(false);
 	obj2.c = obj2;
 	expect(checkSimilarity(obj1, obj2)).toEqual(true);
 });
@@ -97,9 +140,9 @@ test("object with circular map", function() {
 });
 
 test("object with set", function() {
-	let obj1 = { s: new Set([1, Symbol('2'), "t"]) };
+	let obj1 = { s: new Set([1, Symbol("2"), "t"]) };
 	obj1.c = obj1;
-	let obj2 = { s: new Set([1, Symbol('2')]) };
+	let obj2 = { s: new Set([1, Symbol("2")]) };
 	obj2.s.add("t");
 	obj2.c = obj2;
 	expect(checkSimilarity(obj1, obj2)).toEqual(true);
@@ -163,11 +206,10 @@ test("Number classes", function() {
 	expect(checkSimilarity(obj2, obj1)).toEqual(true);
 });
 
-
 test("String classes", function() {
-	let obj1 = new String('str');
-	let obj2 = new String('str');
-	expect(checkSimilarity('str', obj1)).toEqual(false);
+	let obj1 = new String("str");
+	let obj2 = new String("str");
+	expect(checkSimilarity("str", obj1)).toEqual(false);
 	expect(checkSimilarity(obj2, obj1)).toEqual(true);
 	obj1.x = 1;
 	expect(checkSimilarity(obj2, obj1)).toEqual(false);
@@ -203,9 +245,9 @@ test("ArrayBuffer class", function() {
 	let u2 = new Uint8Array(obj2);
 	expect(checkSimilarity(obj1, obj2)).toEqual(true);
 	expect(checkSimilarity(obj2, obj1)).toEqual(true);
-	u1[2]=20;
+	u1[2] = 20;
 	expect(checkSimilarity(obj2, obj1)).toEqual(false);
-	u2[2]=20;
+	u2[2] = 20;
 	expect(checkSimilarity(obj2, obj1)).toEqual(true);
 });
 
@@ -219,15 +261,15 @@ test("TypedArray classes", function() {
 	u2 = new Uint8Array(obj2);
 	expect(checkSimilarity(u1, u2)).toEqual(true);
 	expect(checkSimilarity(u2, u1)).toEqual(true);
-	u1[2]=20;
+	u1[2] = 20;
 	expect(checkSimilarity(u1, u2)).toEqual(false);
-	u2[2]=20;
+	u2[2] = 20;
 	expect(checkSimilarity(u1, u2)).toEqual(true);
-	u1 = new Uint8Array(obj1,2,4);
+	u1 = new Uint8Array(obj1, 2, 4);
 	expect(checkSimilarity(u1, u2)).toEqual(false);
-	u2 = new Uint8Array(obj2,2,3);
+	u2 = new Uint8Array(obj2, 2, 3);
 	expect(checkSimilarity(u1, u2)).toEqual(false);
-	u2 = new Uint8Array(obj2,2,4);
+	u2 = new Uint8Array(obj2, 2, 4);
 	expect(checkSimilarity(u1, u2)).toEqual(true);
 });
 
@@ -240,8 +282,8 @@ test("SharedArrayBuffer class", function() {
 	let u2 = new Uint8Array(obj2);
 	expect(checkSimilarity(obj1, obj2)).toEqual(true);
 	expect(checkSimilarity(obj2, obj1)).toEqual(true);
-	u1[2]=20;
+	u1[2] = 20;
 	expect(checkSimilarity(obj2, obj1)).toEqual(false);
-	u2[2]=20;
+	u2[2] = 20;
 	expect(checkSimilarity(obj2, obj1)).toEqual(true);
 });
