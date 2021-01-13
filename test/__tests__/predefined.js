@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 var scriptify = require("../../src");
-var checkSimilarity = require("../object_similarity");
+var checkSimilarity = require("../checkSimilarity");
 
 // var run = function(obj) {
 // 	return eval(scriptify(obj));

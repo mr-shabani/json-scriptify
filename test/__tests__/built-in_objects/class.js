@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 var scriptify = require("../../../");
-var checkSimilarity = require("../../object_similarity");
+var checkSimilarity = require("../../checkSimilarity");
 
 var run = function(obj) {
 	return eval(scriptify(obj));
@@ -121,6 +121,7 @@ test("class with complex name for inheritance", function() {
 
 test("arrow function that starts with class identifier", function() {
 	var obj = class_ => 1;
+	obj.x=1;
 	expect(checkFor(obj)).toEqual(true);
 	expect(checkFor({ f: obj })).toEqual(true);
 });
