@@ -35,7 +35,6 @@ const VariableNameGenerator = function*() {
 
 /**
  * class to keep variable name and variable path to main object
- * @class
  */
 class PathClass {
 	/**
@@ -51,12 +50,12 @@ class PathClass {
 			/** @type {Object} shared items between all paths */
 			this.shared = parentNode.shared;
 		}
-		if (typeof key == "string" || (typeof key == "object" && key != null))
+		if (typeof key == "string" || (typeof key == "object" && key !== null))
 			/** @type {string} string of variable name or key */ this.key = key;
 	}
 	/** make a new path with the same shared items */
-	newPath() {
-		let newPath = new PathClass(...arguments);
+	newPath(...args) {
+		let newPath = new PathClass(...args);
 		newPath.getSharedItems(this);
 		return newPath;
 	}
@@ -108,6 +107,15 @@ class PathClass {
 		this.key = this._newName();
 		return this.key;
 	}
+	hasDeterminateString() {
+		if (this.parent) {
+			if (this.parent.hasDeterminateString() == false) return false;
+		}
+		if (typeof this.key == "string") return true;
+		if (this.key && "hasDeterminateString" in this.key)
+			return this.key.hasDeterminateString();
+		return false;
+	}
 	/**
 	 * based on pathText and keyText generate new path
 	 * @param {string} pathText
@@ -137,7 +145,7 @@ class PathClass {
 		return this.initTime < path.initTime;
 	}
 	/**
-	 * check that this path has initialized before argument path or 
+	 * check that this path has initialized before argument path or
 	 * at the same time.
 	 * @param {PathClass} path
 	 */
