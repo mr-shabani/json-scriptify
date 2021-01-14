@@ -1,6 +1,6 @@
-"use strict";
-var json_scriptify = require("../");
-var checkSimilarity = require("./object_similarity");
+// "use strict";
+var scriptify = require("../");
+var checkSimilarity = require("./checkSimilarity");
 
 var myObj = {
 	x: 1,
@@ -74,7 +74,7 @@ myObj.inheritClass = class b extends myObj.class {
 // myObj.x = 1;
 // myObj[4] = 2;
 // myObj["6"] = 1;
-// sym = Symbol("test");
+// let sym = Symbol("test");
 // myObj.a = [sym, myObj, 3, 4];
 // myObj.a.b = { x: 1, [sym]: sym };
 // myObj.length = 20;
@@ -87,13 +87,13 @@ myObj.inheritClass = class b extends myObj.class {
 
 // c.f = c;
 
-// class b extends c {
+// class b extends (function(){return c;})() {
 // 	constructor() {
 // 		super();
 // 	}
 // }
 
-// b = function() {};
+// let b = function() {};
 
 // b.prototype.z = 1;
 
@@ -102,11 +102,21 @@ myObj.inheritClass = class b extends myObj.class {
 // 		super();
 // 	}
 // }
-// myObj = c;
 
-// o = {c:class a extends b{}}
+// myObj = b;
+
+// myObj = Object.getOwnPropertyDescriptor(myObj,'func').set;
+
+// let o = {c:class a extends b{}}
 // o.x = class b extends o.c {};
 // myObj = o;
+
+// let parentClass = class a {};
+// let obj = class myExtendedClass extends parentClass {};
+
+// var script = scriptify(obj,null, { predefined: [["parentClass", parentClass]] });
+
+// console.log(script);
 
 // f= function(){};
 // o={};
@@ -129,7 +139,7 @@ myObj.inheritClass = class b extends myObj.class {
 // myObj.repeated = myObj.date;
 
 // myObj = {
-// 	func: function f() {},
+// 	func: function () {},
 // 	sym: Symbol("1"),
 // 	arr: new ArrayBuffer(4),
 // 	circular: new Set()
@@ -151,15 +161,55 @@ myObj.inheritClass = class b extends myObj.class {
 // 	current_obj.obj = {};
 // 	current_obj = current_obj.obj;
 // }
-myObj = Symbol.replace;
+// myObj = Symbol.replace;
+// myObj = require('fs');
 
-var script = json_scriptify(myObj);
+// myObj = function(){}
+// let sym = Symbol();
+// // let sym = "r";
+// myObj[sym] = function x(){}
+// myObj[sym]['a']=1
+
+// let sym = Symbol('r');
+// let sym = 'r';
+
+// myObj = {[sym]() { return 1; }};
+// myObj = {get [(function(){return sym;})()]() { return 1; } ,set c(x){},M(x){return x}};
+// Object.defineProperty(myObj, "b", {
+// 	get: Object.getOwnPropertyDescriptor(myObj, "c").get,
+// 	configurable: true,
+// 	enumerable: true
+// });
+// myObj = {get c(){return 2;},demo(){}};
+
+// myObj = {async[Symbol.iterator](){}};
+// myObj = require("http").OutgoingMessage;
+
+// let save = Function.prototype.toString;
+// Function.prototype.toString = function() {
+// 	return "function(){}";
+// };
+
+// myObj = require('http').OutgoingMessage;
+
+var script = scriptify(myObj);
 
 console.log("script :");
 console.log(script);
 
 var obj2 = eval(script);
-console.log(obj2);
-console.log(myObj);
+// console.log(obj2);
+// console.log(myObj);
 
 console.log("checkSimilarity = ", checkSimilarity(myObj, obj2));
+
+// Object.getOwnPropertyNames(myObj).forEach(key => {
+// 	console.log(
+// 		key,
+// 		" : ",
+// 		checkSimilarity(
+// 			Object.getOwnPropertyDescriptor(myObj, key),
+// 			Object.getOwnPropertyDescriptor(obj2, key)
+// 		)
+// 	);
+// });

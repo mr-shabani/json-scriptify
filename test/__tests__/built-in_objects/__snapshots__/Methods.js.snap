@@ -1,0 +1,91 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`method with expression name 1`] = `
+"(function(){
+ const _={};
+ let obj;
+ obj={};
+ _.a=Symbol(\\"r\\");
+ Object.assign(obj,{[_.a](x) {
+      return 2 * x;
+    }});
+ _.b={length:{value:1,configurable:true},name:{value:\\"[r]\\",configurable:true}};
+ Object.defineProperties(obj[_.a],_.b);
+ return obj;
+ })()"
+`;
+
+exports[`method with expression name 2`] = `
+"(function(){
+ const _={};
+ let obj;
+ obj={f:{}};
+ _.a=Symbol(\\"r\\");
+ Object.assign(obj.f,{[_.a](x) {
+      return 2 * x;
+    }});
+ _.b={length:{value:1,configurable:true},name:{value:\\"[r]\\",configurable:true}};
+ Object.defineProperties(obj.f[_.a],_.b);
+ return obj;
+ })()"
+`;
+
+exports[`method with expression name 3`] = `
+"(function(){
+ const _={};
+ let obj;
+ obj={};
+ _.b=Symbol(\\"r\\");
+ _.a={[_.b]:{set:Object.getOwnPropertyDescriptor({set [\\"set\\"](x) {}},\\"set\\").set,enumerable:true,configurable:true}};
+ _.c={name:{value:\\"set [r]\\",configurable:true}};
+ Object.defineProperties(_.a[_.b].set,_.c);
+ Object.defineProperties(obj,_.a);
+ return obj;
+ })()"
+`;
+
+exports[`method with expression name 4`] = `
+"(function(){
+ const _={};
+ let obj;
+ obj={f:{}};
+ _.b=Symbol(\\"r\\");
+ _.a={[_.b]:{set:Object.getOwnPropertyDescriptor({set [\\"set\\"](x) {}},\\"set\\").set,enumerable:true,configurable:true}};
+ _.c={name:{value:\\"set [r]\\",configurable:true}};
+ Object.defineProperties(_.a[_.b].set,_.c);
+ Object.defineProperties(obj.f,_.a);
+ return obj;
+ })()"
+`;
+
+exports[`method with expression name 5`] = `
+"(function(){
+ const _={};
+ let obj;
+ obj={};
+ _.b=Symbol(\\"r\\");
+ _.a={[_.b]:{get:Object.getOwnPropertyDescriptor({get [\\"get\\"]() {
+      return 2;
+    }},\\"get\\").get,enumerable:true,configurable:true}};
+ _.c={name:{value:\\"get [r]\\",configurable:true}};
+ Object.defineProperties(_.a[_.b].get,_.c);
+ Object.defineProperties(obj,_.a);
+ return obj;
+ })()"
+`;
+
+exports[`method with expression name 6`] = `
+"(function(){
+ const _={};
+ let obj;
+ obj={f:{}};
+ _.b=Symbol(\\"r\\");
+ _.a={[_.b]:{get:Object.getOwnPropertyDescriptor({get [\\"get\\"]() {
+      return 2;
+    }},\\"get\\").get,enumerable:true,configurable:true}};
+ _.c={name:{value:\\"get [r]\\",configurable:true}};
+ Object.defineProperties(_.a[_.b].get,_.c);
+ Object.defineProperties(obj.f,_.a);
+ return obj;
+ })()"
+`;

@@ -1,5 +1,5 @@
 /* eslint-disable no-undef */
-let predefined = [
+const predefined = [
 	"global",
 	"window",
 	"Object",

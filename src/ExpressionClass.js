@@ -6,7 +6,7 @@
  * @param {Array} arr Array of expressions
  * @returns {Array} newArray One array that does not include any array
  */
-var makeFlat = function(arr) {
+const makeFlat = function(arr) {
 	let newArray = [];
 	arr.forEach(element => {
 		if (element instanceof Array) newArray.push(...makeFlat(element));
@@ -24,32 +24,29 @@ class ExpressionClass {
 	/**
 	 * @param {...(string|ExpressionClass)} expression elements
 	 */
-	constructor() {
-		let args = makeFlat([...arguments]).map(x => {
-			if (x instanceof ExpressionClass) return x.expression;
-			return x;
-		});
-		/** @type {Array} array of expression elements */
-		this.expression = makeFlat(args);
+	constructor(...args) {
+		/** @type {Array.<(string|ExpressionClass)>} array of elements in the expression */
+		this.expressions = makeFlat(args);
 	}
 	toString() {
-		return this.expression.join("");
+		return this.expressions.join("");
 	}
 	/** construct a new Expression class and return it. */
-	makeExpression() {
-		return new ExpressionClass(...arguments);
+	makeExpression(...args) {
+		return new ExpressionClass(...args);
 	}
-	/** remove elements and characters before the first '=' character and also itself. */
+	/** remove elements and characters before the first '=' character and also first '='.*/
 	removeAssignment() {
-		while (this.expression.length > 0) {
-			if (typeof this.expression[0] != "string") {
-				this.expression.shift();
+		while (this.expressions.length > 0) {
+			if (typeof this.expressions[0] != "string") {
+				this.expressions.shift();
 			} else {
-				let index = this.expression[0].indexOf("=");
+				let index = this.expressions[0].indexOf("=");
 				if (index < 0) {
-					this.expression.shift();
+					this.expressions.shift();
 				} else {
-					this.expression[0] = this.expression[0].slice(index + 1);
+					this.expressions[0] = this.expressions[0].slice(index + 1);
+					if (this.expressions[0].length == 0) this.expressions.shift();
 					break;
 				}
 			}
@@ -57,7 +54,26 @@ class ExpressionClass {
 		return this;
 	}
 	isEmpty() {
-		return this.expression.length == 0;
+		return this.expressions.length == 0;
+	}
+	/**
+	 * The initTime of an expression is defined as maximum initTime of its elements.
+	 */
+	get initTime() {
+		let initTime = 0;
+		this.expressions.forEach(expr => {
+			// eslint-disable-next-line no-prototype-builtins
+			if (typeof expr == "object" && expr.hasOwnProperty("initTime"))
+				if (initTime < expr.initTime) initTime = expr.initTime;
+		});
+		return initTime;
+	}
+	hasDeterminateString() {
+		return this.expressions.every(value => {
+			if (typeof value == "string") return true;
+			if ("hasDeterminateString" in value) return value.hasDeterminateString();
+			return false;
+		});
 	}
 }
 

@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 var scriptify = require("../../");
-var checkSimilarity = require("../object_similarity");
+var checkSimilarity = require("../checkSimilarity");
 const vm = require("vm");
 
 var run = function(obj) {

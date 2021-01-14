@@ -2,25 +2,35 @@
 "use strict";
 const { types: utilTypes } = require("util");
 const {
-	objectIsSame,
-	getSameProperties,
+	getSamePropertiesWhenEvaluated,
 	cleanKey,
 	insertBetween,
-	hideKeys,
-	innerObject,
-	isBigIntObject
-} = require("./helper");
+	InnerObject,
+	isBigIntObject,
+	FunctionWrapper
+} = require("./utility");
 
-const classToScript = require("./classToScript");
+const { analyseFunctionCode } = require("./functions/functionUtility");
+
+const funcToScript = require("./functions/funcToScript");
 
 const { ExpressionClass } = require("./ExpressionClass");
 const makeExpression = ExpressionClass.prototype.makeExpression;
 
+/**
+ * @typedef {Object} ClassToScript
+ * @property {(string|function|function[])} type
+ * @property {function(any):boolean} [isTypeOf]
+ * @property {function(any,getScript=,PathClass=)} toScript
+ * @property {string[]} [ignoreProperties]
+ */
+
+/** @type {Array.<ClassToScript>} */
 const classes = [
 	{
 		type: "symbol",
 		toScript: function(obj) {
-			let symbolDescription = String(obj).slice(7, -1);
+			const symbolDescription = String(obj).slice(7, -1);
 			return `Symbol("${symbolDescription}")`;
 		}
 	},
@@ -81,7 +91,7 @@ const classes = [
 		isTypeOf: utilTypes.isRegExp,
 		toScript: function(obj) {
 			/** @type {string[]} object keys that will be ignored in produce script*/
-			this.ignoreProperties = getSameProperties(obj, obj.toString());
+			this.ignoreProperties = getSamePropertiesWhenEvaluated(obj, obj.toString());
 			return obj.toString();
 		}
 	},
@@ -89,7 +99,7 @@ const classes = [
 		type: Map,
 		isTypeOf: utilTypes.isMap,
 		toScript: function(obj, getScript, path) {
-			let mapContentArray = Array.from(obj);
+			const mapContentArray = Array.from(obj);
 			if (mapContentArray.length == 0) return "new Map()";
 			/** 'init' expressions will be inserted at the first and
 			 *  'add' expressions will be inserted at the last.*/
@@ -97,7 +107,7 @@ const classes = [
 				init: "new Map()",
 				add: makeExpression(
 					getScript(
-						new innerObject(mapContentArray.map(x => new innerObject(x)))
+						new InnerObject(mapContentArray.map(x => new InnerObject(x)))
 					),
 					".forEach(([k,v])=>{",
 					path,
@@ -110,15 +120,15 @@ const classes = [
 		type: Set,
 		isTypeOf: utilTypes.isSet,
 		toScript: function(obj, getScript, path) {
-			let setContentArray = Array.from(obj);
+			const setContentArray = Array.from(obj);
 			if (setContentArray.length == 0) return "new Set()";
 			/** 'init' expressions will be inserted at the first and
 			 *  'add' expressions will be inserted at the last.*/
 			return {
 				init: "new Set()",
 				add: makeExpression(
-					getScript(new innerObject(setContentArray)),
-					".forEach((v)=>{",
+					getScript(new InnerObject(setContentArray)),
+					".forEach(v=>{",
 					path,
 					".add(v);})"
 				)
@@ -137,10 +147,10 @@ const classes = [
 		],
 		isTypeOf: utilTypes.isNativeError,
 		toScript: function(obj) {
-			let ErrorName = Object.getPrototypeOf(obj).constructor.name;
-			let script = `new ${ErrorName}(${JSON.stringify(obj.message)})`;
+			const ErrorName = Object.getPrototypeOf(obj).constructor.name;
+			const script = `new ${ErrorName}(${JSON.stringify(obj.message)})`;
 			/** @type {string[]} object keys that will be ignored in produce script*/
-			this.ignoreProperties = getSameProperties(obj, script);
+			this.ignoreProperties = getSamePropertiesWhenEvaluated(obj, script);
 			return script;
 		}
 	},
@@ -148,11 +158,11 @@ const classes = [
 		type: DataView,
 		isTypeOf: utilTypes.isDataView,
 		toScript: function(obj, getScript, path) {
-			let length =
+			const length =
 				obj.byteLength == obj.buffer.byteLength - obj.byteOffset
 					? ""
 					: "," + obj.byteLength;
-			let byteOffset =
+			const byteOffset =
 				obj.byteOffset == 0 && length == "" ? "" : "," + obj.byteOffset;
 			/** 'init' expressions will be inserted at the first and
 			 *  'add' expressions will be inserted at the last.*/
@@ -183,15 +193,15 @@ const classes = [
 		],
 		isTypeOf: utilTypes.isTypedArray,
 		toScript: function(obj, getScript, path) {
-			let TypedArrayName = Object.getPrototypeOf(obj).constructor.name;
+			const TypedArrayName = Object.getPrototypeOf(obj).constructor.name;
 			/** @type {string[]} object keys that will be ignored in produce script*/
 			this.ignoreProperties = [...Array(obj.length).keys()].map(String);
-			let length =
+			const length =
 				obj.length * obj.BYTES_PER_ELEMENT ==
 				obj.buffer.byteLength - obj.byteOffset
 					? ""
 					: "," + obj.length;
-			let byteOffset =
+			const byteOffset =
 				obj.byteOffset == 0 && length == "" ? "" : "," + obj.byteOffset;
 			/** 'init' expressions will be inserted at the first and
 			 *  'add' expressions will be inserted at the last.*/
@@ -211,12 +221,12 @@ const classes = [
 		type: ArrayBuffer,
 		isTypeOf: utilTypes.isArrayBuffer,
 		toScript: function(obj) {
-			let uint8 = new Uint8Array(obj);
+			const uint8 = new Uint8Array(obj);
 			let content = "";
 			uint8.forEach(v => {
 				content += (v < 16 ? "0" : "") + v.toString(16);
 			});
-			let allZeroRegExp = /^0*$/;
+			const allZeroRegExp = /^0*$/;
 			if (allZeroRegExp.test(content))
 				return `new ArrayBuffer(${obj.byteLength})`;
 			return `Uint8Array.from("${content}".match(/../g),v=>parseInt(v,16)).buffer`;
@@ -226,15 +236,15 @@ const classes = [
 		type: SharedArrayBuffer,
 		isTypeOf: utilTypes.isSharedArrayBuffer,
 		toScript: function(obj, getScript, path) {
-			let uint8 = new Uint8Array(obj);
+			const uint8 = new Uint8Array(obj);
 			let content = "";
 			uint8.forEach(v => {
 				content += (v < 16 ? "0" : "") + v.toString(16);
 			});
-			let allZeroRegExp = /^0*$/;
+			const allZeroRegExp = /^0*$/;
 			if (allZeroRegExp.test(content))
 				return `new SharedArrayBuffer(${obj.byteLength})`;
-			let newPath = path.newPath();
+			const newPath = path.newPath();
 			/** 'init' expressions will be inserted at the first and
 			 *  'add' expressions will be inserted at the last.*/
 			return {
@@ -248,55 +258,6 @@ const classes = [
 					)
 				]
 			};
-		}
-	},
-	{
-		type: "function",
-		toScript: function(obj, getScript, path) {
-			var scriptArray;
-			let stringOfObj = obj.toString();
-			const nativeFunctionRegExp = /\{\s*\[native code]\s*}$/;
-			if (nativeFunctionRegExp.test(stringOfObj)) {
-				throw new TypeError("native code functions cannot be scriptified!");
-			}
-
-			const classRegExp = /^class\s+[a-zA-Z_]\w*/;
-			if (classRegExp.test(stringOfObj)) {
-				scriptArray = classToScript(obj, getScript, path, makeExpression);
-			} else scriptArray = [stringOfObj];
-
-			if (obj.prototype) {
-				let default_prototype = { constructor: obj };
-				default_prototype.__proto__ = obj.prototype.__proto__;
-				if (!objectIsSame(obj.prototype, default_prototype)) {
-					let prototypePath = path.addWithNewInitTime("prototype");
-					let prototypeScript;
-					if (obj.prototype.constructor == obj)
-						prototypeScript = getScript(
-							hideKeys(obj.prototype, ["constructor"]),
-							prototypePath
-						);
-					else prototypeScript = getScript(obj.prototype, prototypePath);
-					scriptArray.push(
-						makeExpression(
-							"Object.assign(",
-							prototypePath,
-							",",
-							prototypeScript.popInit(),
-							")"
-						),
-						prototypeScript
-					);
-				}
-			}
-			try {
-				this.ignoreProperties = getSameProperties(obj, scriptArray[0]);
-			} catch (e) {
-				this.ignoreProperties = [];
-			}
-			if (path.key == obj.name) this.ignoreProperties.push("name");
-			this.ignoreProperties.push("prototype");
-			return scriptArray;
 		}
 	},
 	{
@@ -317,22 +278,22 @@ const classes = [
 		type: Array,
 		isTypeOf: Array.isArray,
 		toScript: function(obj, getScript, path) {
-			var initScript = [[]];
-			var addScript = [[]];
-			var lastIndex = -1;
-			var scriptIndex = 0;
-			var initTime = path.initTime;
+			let initScript = [[]];
+			const addScript = [[]];
+			let lastIndex = -1;
+			let scriptIndex = 0;
+			let initTime = path.initTime;
 			obj.forEach((element, index) => {
 				if (lastIndex != index - 1) {
 					initScript[++scriptIndex] = `.length = ${index}`;
 					initScript[++scriptIndex] = [];
 					addScript[scriptIndex] = [];
-					initTime = path.getNewInitTime();
+					initTime = path._getNewInitTime();
 				}
-				let indexPath = path.add(index.toString());
+				const indexPath = path.add(index.toString());
 				indexPath.initTime = initTime;
-				let elementScript = getScript(element, indexPath);
-				let elementInit = elementScript.popInit();
+				const elementScript = getScript(element, indexPath);
+				const elementInit = elementScript.popInit();
 				if (elementInit.isEmpty()) initScript[scriptIndex].push("null");
 				else initScript[scriptIndex].push(elementInit);
 				addScript[scriptIndex].push(elementScript);
@@ -372,34 +333,140 @@ const classes = [
 		}
 	},
 	{
+		type: "function",
+		toScript: funcToScript
+	},
+	{
 		// This item always must be at the end of the list
 		type: "object",
 		toScript: function(obj, getScript, path) {
-			var entries = Object.entries(obj).filter(([key]) => {
-				var descriptor = Object.getOwnPropertyDescriptor(obj, key);
-				return descriptor.configurable && descriptor.writable;
+			const descriptors = {};
+			let wrapObj;
+			if (obj instanceof InnerObject) {
+				wrapObj = obj;
+				obj = obj.value;
+			}
+
+			let keys = Object.keys(obj)
+				.concat(Object.getOwnPropertySymbols(obj))
+				.filter(key => {
+					const desc = Object.getOwnPropertyDescriptor(obj, key);
+					descriptors[key] = desc;
+					return (
+						(desc.configurable && desc.enumerable && desc.writable !== false)
+					);
+				});
+
+			const ignoreProperties = [];
+
+			if (wrapObj && wrapObj.hiddenKeys) {
+				ignoreProperties.push(...wrapObj.hiddenKeys);
+				keys = keys.filter(key => !wrapObj.hiddenKeys.includes(key));
+			}
+
+			const objInitExpression = [];
+			const nextScript = [];
+
+			keys.forEach(key => {
+				const desc = descriptors[key];
+				let keyPath;
+				if (typeof key == "symbol") {
+					keyPath = getScript(key);
+					if (path.isNotAfter(keyPath)) return;
+				} else keyPath = JSON.stringify(key);
+				if ("value" in desc) {
+					if (typeof desc.value == "function")
+						desc.value = new FunctionWrapper(desc.value, {
+							key: typeof key == "symbol" ? keyPath : key,
+							type: "method"
+						});
+					const valueScript = getScript(desc.value, path.add(key, getScript));
+					const initValueScript = valueScript.popInit();
+					if (initValueScript.isEmpty() == false) {
+						if (typeof desc.value == "function" && desc.value.noNeedKey) {
+							objInitExpression.push(initValueScript, ",");
+						} else if (typeof key == "symbol") {
+							objInitExpression.push("[", keyPath, "]:", initValueScript, ",");
+						} else
+							objInitExpression.push(cleanKey(key), ":", initValueScript, ",");
+					}
+					nextScript.push(valueScript);
+				}
+				if (desc.get) {
+					const funcData = analyseFunctionCode(
+						Function.prototype.toString.call(desc.get)
+					);
+					if (funcData.prefix !== "get") return;
+					if (funcData.name && funcData.name !== key) return;
+				}
+				if (desc.set) {
+					const funcData = analyseFunctionCode(
+						Function.prototype.toString.call(desc.set)
+					);
+					if (funcData.prefix !== "set") return;
+					if (funcData.name && funcData.name !== key) return;
+				}
+				if (desc.get) {
+					const getterPath = path.newPath(
+						makeExpression(
+							"Object.getOwnPropertyDescriptor(",
+							path,
+							",",
+							keyPath,
+							").get"
+						)
+					);
+					desc.get = new FunctionWrapper(desc.get, {
+						key: typeof key == "symbol" ? keyPath : key,
+						type: "get",
+						path: getterPath
+					});
+					const valueScript = getScript(desc.get, getterPath);
+					const initValueScript = valueScript.popInit();
+					if (initValueScript.isEmpty() == false) {
+						if (desc.get.noNeedKey) {
+							objInitExpression.push(initValueScript, ",");
+						} else throw new Error("Oops! impossible!");
+					}
+					nextScript.push(valueScript);
+				}
+				if (desc.set) {
+					const setterPath = path.newPath(
+						makeExpression(
+							"Object.getOwnPropertyDescriptor(",
+							path,
+							",",
+							keyPath,
+							").set"
+						)
+					);
+					desc.set = new FunctionWrapper(desc.set, {
+						key: typeof key == "symbol" ? keyPath : key,
+						type: "set",
+						path: setterPath
+					});
+					const valueScript = getScript(desc.set, setterPath);
+					const initValueScript = valueScript.popInit();
+					if (initValueScript.isEmpty() == false) {
+						if (desc.set.noNeedKey) {
+							objInitExpression.push(initValueScript, ",");
+						} else throw new Error("Oops! impossible!");
+					}
+					nextScript.push(valueScript);
+				}
+				ignoreProperties.push(key);
 			});
-			var script = entries.map(([key, value]) => [
-				key,
-				getScript(value, path.add(key))
-			]);
+
+			objInitExpression.pop();
 
 			/** @type {string[]} object keys that will be ignored in produce script*/
-			this.ignoreProperties = entries.map(([key]) => key);
+			this.ignoreProperties = ignoreProperties;
 
-			let expression = [];
-
-			script.forEach(([key, valScript]) => {
-				let initValueScript = valScript.popInit();
-				if (initValueScript.isEmpty() == false)
-					expression.push(cleanKey(key), ":", initValueScript, ",");
-			});
-			expression.pop();
 			/** 'init' expressions will be inserted at the first and
 			 *  'add' expressions will be inserted at the last.*/
 			return {
-				init: makeExpression(path, "=", "{", expression, "}"),
-				add: script.map(([, valScript]) => valScript)
+				init: makeExpression(path, "=", "{", objInitExpression, "}"),
+				add: nextScript
 			};
 		}
 	}
