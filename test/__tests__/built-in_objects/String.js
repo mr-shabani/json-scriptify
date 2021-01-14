@@ -1,5 +1,5 @@
 var scriptify = require("../../../");
-var checkSimilarity = require("../../object_similarity");
+var checkSimilarity = require("../../checkSimilarity");
 
 var run = function(obj, withFunctions) {
 	if (withFunctions) return eval(scriptify.withAllFunctions(obj));

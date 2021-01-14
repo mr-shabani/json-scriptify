@@ -1,26 +1,27 @@
 "use strict";
-var ScriptFromObject = require("./ScriptFromObject");
-
+const ScriptClass = require("./ScriptClass");
+/**
+ * @typedef {Object} Options
+ * @property {Array.<[string,any]>} [predefined]
+ * @property {string} [lineBreak]
+ */
 /**
  * return an script that can produce an object the same as input object
  * @param {any} obj
  * @param {function(any):any} Replacer
- * @param {Object} options
+ * @param {Options} options
  * @returns {string}
  */
-var scriptify = function(obj, Replacer, options) {
+const scriptify = function(obj, Replacer, options) {
 	options = options || {};
 	options.lineBreak =
 		typeof options.lineBreak == "string" ? options.lineBreak : "\n ";
 	options.replacer = Replacer;
-	var scriptFromObject = new ScriptFromObject(
-		obj,
-		undefined,
-		undefined,
-		options
-	);
+	const scriptClass = new ScriptClass(options);
 
-	const script = scriptFromObject.export(options);
+	scriptClass.buildExpressionsOf(obj);
+
+	const script = scriptClass.export();
 
 	return script;
 };

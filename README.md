@@ -32,7 +32,7 @@ Supported built-in objects :
 - **SharedArrayBuffer**
 - **Typed Arrays** : Int8Array, ... , Uint32Array, Float32Array, Float64Array, BigInt64Array, BigUint64Array
 - **DataView**
-- **Function** : Only the string code of functions( from toString() ) will be added to the script. We cannot copy variables from closures.
+- **Function** : Only the string code of functions( from toString() ) will be added to the script. We cannot copy variables from closures. Also, methods, getters, setters and generator functions are supported.
   - <span style="font-size: 1.3em;color: red">&#9888;&#65039;</span> <span style="background-color:#fcc"> Bound functions cannot be converted to script.</span>
 - **Classes** : Only the string code of classes (from toString() ) and their **parent classes** will be added to the script. We cannot copy variables from closures.
 
@@ -80,7 +80,7 @@ script = scriptify(obj);
 console.log(script);
 /*
 (function(){
- var obj;
+ let obj;
  obj={num:1,str:"string",date:new Date(1601920884331),re:/any regex/g};
  obj.circular=obj;
  obj.repeated=obj.date;
@@ -117,14 +117,14 @@ console.log(script);
 /*
 (function(){
  const _={};
- var obj;
- obj={func:function f() {},arr:Uint8Array.from("e8030000".match(/../g),v=>parseInt(v,16)).buffer,circular:new Set()};
+ let obj;
+ obj={func:function () {},arr:Uint8Array.from("e8030000".match(/../g),v=>parseInt(v,16)).buffer,circular:new Set()};
  Object.assign(obj.func.prototype,{sym:Symbol("1")});
  obj.sym=obj.func.prototype.sym;
  _.a=[obj,obj.func.prototype.sym,obj.func,obj.arr,obj.circular];
- _.a.forEach((v)=>{obj.circular.add(v);});
+ _.a.forEach(v=>{obj.circular.add(v);});
  return obj;
-})()
+ })()
 */
 ```
 
@@ -173,14 +173,15 @@ var script = scriptify(obj,null, { predefined: [["parentClass", parentClass]] })
 console.log(script);
 /*
 (function(){
- var obj;
+ const _={};
+ let obj;
  obj=(function(){
  return class myExtendedClass extends parentClass {};
  })();
- Object.defineProperty(obj,"length",{value:0,configurable:true});
- Object.defineProperty(obj,"name",{value:"myExtendedClass",configurable:true});
+ _.a={length:{value:0,configurable:true},name:{value:"myExtendedClass",configurable:true}};
+ Object.defineProperties(obj,_.a);
  return obj;
- })()
+ })())
 */
 ```
 

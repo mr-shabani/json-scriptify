@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 var scriptify = require("../../src");
-var checkSimilarity = require("../object_similarity");
+var checkSimilarity = require("../checkSimilarity");
 
 // var run = function(obj) {
 // 	return eval(scriptify(obj));
@@ -12,14 +12,7 @@ var checkSimilarity = require("../object_similarity");
 
 test("predefined values", function() {
 	let obj = { str: String, [Symbol.iterator]: Number };
-	expect(
-		`(function(){
- var obj;
- obj={str:String};
- obj[Symbol.iterator]=Number;
- return obj;
- })()`
-	).toEqual(scriptify(obj));
+	expect("({str:String,[Symbol.iterator]:Number})").toEqual(scriptify(obj));
 });
 
 test("predefined objects", function() {
@@ -32,11 +25,15 @@ test("predefined objects", function() {
 			obj2
 		)
 	).toEqual(true);
-	expect(() => scriptify(obj, null, { predefined: ["script", obj] })).toThrowError();
+	expect(() =>
+		scriptify(obj, null, { predefined: ["script", obj] })
+	).toThrowError();
 	expect(() =>
 		scriptify(obj, null, { predefined: [[obj, "script"]] })
 	).toThrowError();
 	expect(() =>
-		scriptify(obj, null, { predefined: [["script", obj,"excessive elements"]] })
+		scriptify(obj, null, {
+			predefined: [["script", obj, "excessive elements"]]
+		})
 	).toThrowError();
 });
