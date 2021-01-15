@@ -9,8 +9,7 @@ const hasOwn = Object.prototype.hasOwnProperty;
 const {
 	getSameProperties,
 	getSamePropertiesWhenEvaluated,
-	hideKeys,
-	FunctionWrapper
+	ignoreSomeProps
 } = require("../utility");
 
 const {
@@ -20,14 +19,9 @@ const {
 
 const classToScript = require("./classToScript");
 
-const functionToScript = function(obj, getScript, path) {
+const functionToScript = function(obj, getScript, path, wrapObj) {
 	let scriptArray;
-	let isInObject = false;
-	if (obj instanceof FunctionWrapper) {
-		var wrapObj = obj;
-		obj = obj.value;
-		isInObject = true;
-	}
+	let isInObject = wrapObj && wrapObj.isInObject;
 
 	let funcCode = Function.prototype.toString.call(obj);
 	const funcData = analyseFunctionCode(funcCode);
@@ -151,7 +145,7 @@ const makePrototypeExpressions = function(obj, getScript, path) {
 	const hiddenKeys = getSameProperties(obj.prototype, default_prototype);
 
 	const prototypeScript = getScript(
-		hideKeys(obj.prototype, hiddenKeys),
+		ignoreSomeProps(obj.prototype, hiddenKeys),
 		prototypePath
 	);
 
@@ -160,6 +154,8 @@ const makePrototypeExpressions = function(obj, getScript, path) {
 		prototypeInitScript = prototypeScript.popInit();
 
 	const scriptArray = [];
+
+	if (prototypeInitScript == undefined) return scriptArray;
 
 	if (prototypeInitScript.expressions[0] instanceof PathClass) {
 		if (prototypeDescriptor.writable)

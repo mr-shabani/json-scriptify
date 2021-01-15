@@ -3,16 +3,13 @@
 const { types: utilTypes } = require("util");
 const {
 	getSamePropertiesWhenEvaluated,
-	cleanKey,
 	insertBetween,
 	InnerObject,
 	isBigIntObject,
-	FunctionWrapper
 } = require("./utility");
 
-const { analyseFunctionCode } = require("./functions/functionUtility");
-
 const funcToScript = require("./functions/funcToScript");
+const objectToScript = require("./objectToScript");
 
 const { ExpressionClass } = require("./ExpressionClass");
 const makeExpression = ExpressionClass.prototype.makeExpression;
@@ -91,7 +88,10 @@ const classes = [
 		isTypeOf: utilTypes.isRegExp,
 		toScript: function(obj) {
 			/** @type {string[]} object keys that will be ignored in produce script*/
-			this.ignoreProperties = getSamePropertiesWhenEvaluated(obj, obj.toString());
+			this.ignoreProperties = getSamePropertiesWhenEvaluated(
+				obj,
+				obj.toString()
+			);
 			return obj.toString();
 		}
 	},
@@ -339,136 +339,7 @@ const classes = [
 	{
 		// This item always must be at the end of the list
 		type: "object",
-		toScript: function(obj, getScript, path) {
-			const descriptors = {};
-			let wrapObj;
-			if (obj instanceof InnerObject) {
-				wrapObj = obj;
-				obj = obj.value;
-			}
-
-			let keys = Object.keys(obj)
-				.concat(Object.getOwnPropertySymbols(obj))
-				.filter(key => {
-					const desc = Object.getOwnPropertyDescriptor(obj, key);
-					descriptors[key] = desc;
-					return (
-						(desc.configurable && desc.enumerable && desc.writable !== false)
-					);
-				});
-
-			const ignoreProperties = [];
-
-			if (wrapObj && wrapObj.hiddenKeys) {
-				ignoreProperties.push(...wrapObj.hiddenKeys);
-				keys = keys.filter(key => !wrapObj.hiddenKeys.includes(key));
-			}
-
-			const objInitExpression = [];
-			const nextScript = [];
-
-			keys.forEach(key => {
-				const desc = descriptors[key];
-				let keyPath;
-				if (typeof key == "symbol") {
-					keyPath = getScript(key);
-					if (path.isNotAfter(keyPath)) return;
-				} else keyPath = JSON.stringify(key);
-				if ("value" in desc) {
-					if (typeof desc.value == "function")
-						desc.value = new FunctionWrapper(desc.value, {
-							key: typeof key == "symbol" ? keyPath : key,
-							type: "method"
-						});
-					const valueScript = getScript(desc.value, path.add(key, getScript));
-					const initValueScript = valueScript.popInit();
-					if (initValueScript.isEmpty() == false) {
-						if (typeof desc.value == "function" && desc.value.noNeedKey) {
-							objInitExpression.push(initValueScript, ",");
-						} else if (typeof key == "symbol") {
-							objInitExpression.push("[", keyPath, "]:", initValueScript, ",");
-						} else
-							objInitExpression.push(cleanKey(key), ":", initValueScript, ",");
-					}
-					nextScript.push(valueScript);
-				}
-				if (desc.get) {
-					const funcData = analyseFunctionCode(
-						Function.prototype.toString.call(desc.get)
-					);
-					if (funcData.prefix !== "get") return;
-					if (funcData.name && funcData.name !== key) return;
-				}
-				if (desc.set) {
-					const funcData = analyseFunctionCode(
-						Function.prototype.toString.call(desc.set)
-					);
-					if (funcData.prefix !== "set") return;
-					if (funcData.name && funcData.name !== key) return;
-				}
-				if (desc.get) {
-					const getterPath = path.newPath(
-						makeExpression(
-							"Object.getOwnPropertyDescriptor(",
-							path,
-							",",
-							keyPath,
-							").get"
-						)
-					);
-					desc.get = new FunctionWrapper(desc.get, {
-						key: typeof key == "symbol" ? keyPath : key,
-						type: "get",
-						path: getterPath
-					});
-					const valueScript = getScript(desc.get, getterPath);
-					const initValueScript = valueScript.popInit();
-					if (initValueScript.isEmpty() == false) {
-						if (desc.get.noNeedKey) {
-							objInitExpression.push(initValueScript, ",");
-						} else throw new Error("Oops! impossible!");
-					}
-					nextScript.push(valueScript);
-				}
-				if (desc.set) {
-					const setterPath = path.newPath(
-						makeExpression(
-							"Object.getOwnPropertyDescriptor(",
-							path,
-							",",
-							keyPath,
-							").set"
-						)
-					);
-					desc.set = new FunctionWrapper(desc.set, {
-						key: typeof key == "symbol" ? keyPath : key,
-						type: "set",
-						path: setterPath
-					});
-					const valueScript = getScript(desc.set, setterPath);
-					const initValueScript = valueScript.popInit();
-					if (initValueScript.isEmpty() == false) {
-						if (desc.set.noNeedKey) {
-							objInitExpression.push(initValueScript, ",");
-						} else throw new Error("Oops! impossible!");
-					}
-					nextScript.push(valueScript);
-				}
-				ignoreProperties.push(key);
-			});
-
-			objInitExpression.pop();
-
-			/** @type {string[]} object keys that will be ignored in produce script*/
-			this.ignoreProperties = ignoreProperties;
-
-			/** 'init' expressions will be inserted at the first and
-			 *  'add' expressions will be inserted at the last.*/
-			return {
-				init: makeExpression(path, "=", "{", objInitExpression, "}"),
-				add: nextScript
-			};
-		}
+		toScript: objectToScript
 	}
 ];
 

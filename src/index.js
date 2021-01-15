@@ -1,5 +1,6 @@
 "use strict";
 const ScriptClass = require("./ScriptClass");
+const { ignoreSomeProps } = require("./utility");
 /**
  * @typedef {Object} Options
  * @property {Array.<[string,any]>} [predefined]
@@ -25,5 +26,8 @@ const scriptify = function(obj, Replacer, options) {
 
 	return script;
 };
+
+scriptify.ignore = ScriptClass.ignoreSymbol;
+scriptify.ignoreSomeProps = ignoreSomeProps;
 
 module.exports = scriptify;
