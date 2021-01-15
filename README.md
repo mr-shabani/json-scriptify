@@ -132,7 +132,7 @@ Albeit, the size of this script can be less, maybe at later versions.
 
 ### Replacer
 
-usage of `Replacer` is like as `JSON.stringify` Replacer. But without `key` and `this`. Only the `value` that we want to produce script of it, will be passed to `Replacer`.
+usage of `Replacer` is like as `JSON.stringify` Replacer. But without `key` and `this` arguments. Only the `value` that we want to produce script of it, will be passed to `Replacer`.
 
 ```javascript
 let scriptify = require("json-scriptify");
@@ -140,14 +140,42 @@ let scriptify = require("json-scriptify");
 let obj = { num: 1, str: "string", date: new Date(), re: /any regex/g };
 
 let replacer = function(value) {
-	if (typeof value == "object" && value!==obj) return;
+	if (typeof value == "object" && value !== obj) return;
 	return value;
 };
 
-var script = scriptify(obj,replacer);
+var script = scriptify(obj, replacer);
 
 console.log(script);
 // ({num:1,str:"string",date:undefined,re:undefined})
+```
+
+If you want to ignore some values from being in the script, you can use `scriptify.ignore`.
+If the replacer returns `scriptify.ignore`, this value will be removed from the script. And, if this value is a key of an object, both the key and its value will be ignored.
+
+If you only want to ignore some properties of an object from the script, you can use `scriptify.ignoreSomeProps` function.
+This function takes two arguments. The first is the object and the second is a list of keys that must be ignored.
+
+```javascript
+let obj = {
+	num: 1,
+	str: "string",
+	date: new Date(),
+	re: /any regex/g,
+	o: { preserve: 1, mustBeIgnored: 2 }
+};
+
+let replacer = function(value) {
+	if (value instanceof Date) return scriptify.ignore;
+	if (typeof value == "object")
+		return scriptify.ignoreSomeProps(value, ["mustBeIgnored"]);
+	return value;
+};
+
+var script = scriptify(obj, replacer);
+
+console.log(script);
+// ({num:1,str:"string",re:/any regex/g,o:{preserve:1}})
 ```
 
 ### predefined values
@@ -168,7 +196,9 @@ let scriptify = require("json-scriptify");
 let parentClass = class a {};
 let obj = class myExtendedClass extends parentClass {};
 
-var script = scriptify(obj,null, { predefined: [["parentClass", parentClass]] });
+var script = scriptify(obj, null, {
+	predefined: [["parentClass", parentClass]]
+});
 
 console.log(script);
 /*
