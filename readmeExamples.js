@@ -46,7 +46,7 @@ console.log(script);
 // Example 3:
 console.log(withColor, "Example 3 :");
 
-obj = { num: 1, str: "string", date: new Date(), re: /any regex/g };
+obj = { num: 1, str: "string", date: new Date(), re: /any regex/g};
 
 let replacer = function(value) {
 	if (typeof value == "object" && value!==obj) return;
@@ -57,6 +57,24 @@ script = scriptify(obj,replacer);
 
 console.log(script);
 
+obj = {
+	num: 1,
+	str: "string",
+	date: new Date(),
+	re: /any regex/g,
+	o: { preserve: 1, mustBeIgnored: 2 }
+};
+
+replacer = function(value) {
+	if (value instanceof Date) return scriptify.ignore;
+	if (typeof value == "object")
+		return scriptify.ignoreSomeProps(value, ["mustBeIgnored"]);
+	return value;
+};
+
+script = scriptify(obj, replacer);
+
+console.log(script);
 // Example 4:
 console.log(withColor, "Example 4 :");
 

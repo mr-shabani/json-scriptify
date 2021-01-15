@@ -122,54 +122,26 @@ class InnerObject {
 	getReplacement() {
 		return this.value;
 	}
-	isInCache() {
-		return false;
-	}
 }
 
-class FunctionWrapper extends InnerObject {
-	constructor(obj, properties) {
-		const thisFunction = function() {};
-		thisFunction.value = obj;
-		Object.setPrototypeOf(thisFunction, FunctionWrapper.prototype);
-		if (properties) Object.assign(thisFunction, properties);
-		return thisFunction;
-	}
+class ObjectWrapper extends InnerObject {
 	getReplacement(replacer) {
 		if (typeof replacer != "function") return this;
 		const replacement = replacer(this.value);
-		if (typeof replacement == "function") {
-			this.value = replacement;
-			return this;
-		}
-		return replacement;
-	}
-	isInCache(cache) {
-		return cache.has(this.value);
-	}
-}
-
-class HideKeysWrapper extends InnerObject {
-	getReplacement(replacer) {
-		if (typeof replacer != "function") return this;
-		const replacement = replacer(this.value);
-		if (typeof replacement == "object") this.value = replacement;
+		this.value = replacement;
 		return this;
-	}
-	isInCache(cache) {
-		return cache.has(this.value);
 	}
 }
 
 /**
- * make a proxy of obj that hide keys
+ * Create an wrapper of obj that says to ignore some keys during making script of obj.
  *
  * @param {Object} obj
- * @param {Array.<(string|symbol)>} keys list of keys that must be hide
- * @returns {Object} A Proxy of obj
+ * @param {Array.<(string|symbol)>} keys List of keys that must be ignored
+ * @returns {Object} A wrapperObject of obj
  */
-const hideKeys = function(obj, keys) {
-	return new HideKeysWrapper(obj, { hiddenKeys: keys });
+const ignoreSomeProps = function(obj, keys) {
+	return new ObjectWrapper(obj, { hiddenKeys: keys });
 };
 
 const isBigIntObject = function(obj) {
@@ -188,8 +160,8 @@ module.exports = {
 	getSamePropertiesWhenEvaluated,
 	cleanKey,
 	insertBetween,
-	hideKeys,
+	ignoreSomeProps,
 	InnerObject,
 	isBigIntObject,
-	FunctionWrapper
+	ObjectWrapper
 };

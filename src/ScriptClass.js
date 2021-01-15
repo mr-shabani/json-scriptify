@@ -14,6 +14,8 @@ const makeExpression = ExpressionClass.prototype.makeExpression;
 
 const defaultObjName = "obj";
 
+const ignoreSymbol = Symbol("ignore this object");
+
 /**
  * @typedef {(string|ExpressionClass|ScriptClass)} GeneralExpression
  */
@@ -150,6 +152,7 @@ class ScriptClass {
 				if (funcName) this.path.key = funcName;
 			}
 		}
+
 		if (obj instanceof InnerObject) {
 			obj = obj.getReplacement(this.shared.options.replacer);
 		} else if (this.shared.options.replacer) {
@@ -200,6 +203,19 @@ class ScriptClass {
 	}
 
 	createExpressions(obj) {
+		const ignoreProperties = [];
+		let wrapObj = undefined;
+		if (obj instanceof InnerObject) {
+			wrapObj = obj;
+			if (wrapObj.hiddenKeys) ignoreProperties.push(...wrapObj.hiddenKeys);
+			obj = obj.value;
+		}
+
+		if (obj === ignoreSymbol) {
+			this.addExpression(makeExpression());
+			return;
+		}
+
 		for (let type of typesToScript) {
 			if (type.isTypeOf(obj)) {
 				this.addExpression(type.toScript(obj));
@@ -209,9 +225,6 @@ class ScriptClass {
 
 		if (!["object", "function", "symbol"].includes(typeof obj)) return;
 
-		if (obj instanceof InnerObject && obj.isInCache(this.shared.cache)) {
-			obj = obj.value;
-		}
 
 		if (this.shared.cache.has(obj)) {
 			let referencePath = this.shared.cache.get(obj);
@@ -226,28 +239,32 @@ class ScriptClass {
 				]);
 			return;
 		}
-		if (obj instanceof InnerObject) {
-			this.shared.cache.set(obj.value, this.path);
-		} else this.shared.cache.set(obj, this.path);
+		this.shared.cache.set(obj, this.path);
 
 		/** @type {Array<string>} keys that must be ignored during makeScriptFromObjectProperties */
-		let ignoreProperties = [];
+		this.ignoreProperties = this.ignoreProperties || [];
 		for (let cls of classesToScript) {
 			if (isInstanceOf(cls, obj)) {
-				const expression = cls.toScript(obj, this.getScript, this.path);
+				const expression = cls.toScript(
+					obj,
+					this.getScript,
+					this.path,
+					wrapObj
+				);
 				this.addExpression(expression);
-				ignoreProperties = cls.ignoreProperties || [];
+				if (cls.ignoreProperties)
+					ignoreProperties.push(...cls.ignoreProperties);
 				break;
 			}
 		}
+
 		this.makeScriptFromObjectProperties(obj, ignoreProperties);
 	}
 
 	/**
 	 * @param {any} obj
-	 * @param {Array<string>} ignoreProperties list of properties that must be ignored
 	 */
-	makeScriptFromObjectProperties(obj, ignoreProperties) {
+	makeScriptFromObjectProperties(obj,ignoreProperties) {
 		if (obj instanceof InnerObject) obj = obj.value;
 
 		const allPropertyKeys = Object.getOwnPropertyNames(obj).concat(
@@ -383,5 +400,7 @@ class ScriptClass {
 		return this.getRawScript();
 	}
 }
+
+ScriptClass.ignoreSymbol = ignoreSymbol;
 
 module.exports = ScriptClass;

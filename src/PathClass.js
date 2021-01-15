@@ -164,6 +164,9 @@ class PathClass {
 		if (typeof this.initTime == "undefined")
 			this.initTime = this._getNewInitTime();
 	}
+	isEmpty(){
+		return false;
+	}
 }
 
 module.exports = PathClass;
